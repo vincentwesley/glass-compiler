@@ -19,13 +19,21 @@
   panel and share links that carry the program in the URL fragment
   (`src/ui/share.ts`), with unit and e2e tests.
 
+- **Robustness pass: done.** A code review of the whole branch found a parser
+  stack overflow on absurdly nested input (which a share link could make
+  permanent through the saved draft), a depth-counter leak, a dead stray-`}`
+  handler, stale cursor lookups mid-edit, and quadratic bytecode rendering.
+  All fixed with tests. Also: share links back up your own code ("Restore my
+  previous code") and work when pasted into an open tab; the examples menu
+  switches to "Your code" after edits; repeated errors are grouped (×N).
+
 ## GitHub Actions minutes
 
-The account has **no Actions minutes left this month** (as of 2026-10-18), so
-CI and the Pages deploy won't run until they reset. Until then, verify locally
-before every push: `npm run verify` and `npm run test:e2e`. The deploy
-workflow can be run by hand from the Actions tab (`workflow_dispatch`) once
-minutes are available, or a later push to `main` will deploy.
+The account was reported to have no Actions minutes left this month
+(2026-10-18), yet CI still ran on this public repo's PR pushes. Either way,
+verify locally before every push: `npm run verify` and `npm run test:e2e`. If
+the Pages deploy doesn't start after merging, run **Deploy to GitHub Pages**
+from the Actions tab (`workflow_dispatch`).
 
 ## One-time step for the repo owner
 

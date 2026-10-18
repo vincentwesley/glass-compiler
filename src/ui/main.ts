@@ -27,6 +27,7 @@ import { mountVm } from './vm-panel';
 
 const DRAFT_KEY = 'glass-draft';
 const DEBOUNCE_MS = 160;
+const MAX_LISTED_DIAGNOSTICS = 30;
 
 function loadDraft(): string | null {
   try {
@@ -44,17 +45,26 @@ function saveDraft(text: string) {
   }
 }
 
+/** Read a shared program from the address bar, then tidy the address bar. */
+function takeSharedFromHash(): string | null {
+  const shared = sourceFromHash(window.location.hash);
+  if (shared !== null) window.history.replaceState(null, '', window.location.href.split('#')[0]);
+  return shared;
+}
+
 function start() {
   document.documentElement.classList.add('js');
-  const shared = sourceFromHash(window.location.hash);
-  if (shared !== null) {
-    // Keep the shared program as the draft and tidy the address bar.
-    saveDraft(shared);
-    window.history.replaceState(null, '', window.location.href.split('#')[0]);
-  }
-  const initial = shared ?? loadDraft() ?? EXAMPLES[0]!.source;
+  const draft = loadDraft();
+  const shared = takeSharedFromHash();
+  // Opening a share link must not lose the visitor's own work: keep it aside.
+  let backup: string | null = shared !== null && draft !== null && draft !== shared ? draft : null;
+  const initial = shared ?? draft ?? EXAMPLES[0]!.source;
+  if (shared !== null) saveDraft(shared);
   const first = build(initial);
   const store = new Store({ build: first, links: buildLinks(first), selected: null, origin: null, step: 0, playing: false, follow: true });
+
+  const select = byId<HTMLSelectElement>('examples');
+  const blurb = byId('example-blurb');
 
   const rebuild = (source: string) => {
     const b = build(source);
@@ -70,16 +80,34 @@ function start() {
       pending = window.setTimeout(() => {
         rebuild(doc);
         saveDraft(doc);
+        markEdited(doc);
       }, DEBOUNCE_MS);
     },
     store,
   );
 
+  /** Replace the whole program (example, share link or restore) in one undoable step. */
+  const loadProgram = (source: string) => {
+    editor.setDoc(source);
+    window.clearTimeout(pending);
+    rebuild(source);
+    saveDraft(source);
+  };
+
   // Diagnostics under the editor.
   const diagList = byId('diagnostics');
   const renderDiagnostics = () => {
     const { build: b } = store.state;
-    const items = b.diagnostics.map((d) => {
+    // Identical messages (often one mistake echoed many times) collapse into one line.
+    const groups = new Map<string, { d: (typeof b.diagnostics)[number]; count: number }>();
+    for (const d of b.diagnostics) {
+      const key = `${d.stage}\u0000${d.message}`;
+      const g = groups.get(key);
+      if (g) g.count++;
+      else groups.set(key, { d, count: 1 });
+    }
+    const grouped = [...groups.values()];
+    const items = grouped.slice(0, MAX_LISTED_DIAGNOSTICS).map(({ d, count }) => {
       const { line, col } = lineCol(b.source, d.span.start);
       return h(
         'li',
@@ -90,9 +118,12 @@ function start() {
           h('span', { class: 'pixel-label diag-stage' }, d.stage),
           h('span', { class: 'diag-pos' }, `${line}:${col}`),
           h('span', { class: 'diag-msg' }, d.message),
+          count > 1 ? h('span', { class: 'diag-count' }, `×${count}`) : null,
         ),
       );
     });
+    const hiddenCount = grouped.length - items.length;
+    if (hiddenCount > 0) items.push(h('li', { class: 'diag-more small muted' }, `…and ${hiddenCount} more. Fix the first ones and the rest often disappear.`));
     diagList.replaceChildren(...items);
     diagList.hidden = items.length === 0;
     byId('source-status').textContent =
@@ -104,28 +135,62 @@ function start() {
   });
   renderDiagnostics();
 
-  // Examples menu.
-  const select = byId<HTMLSelectElement>('examples');
+  // Examples menu, with a "Your code" entry whenever the editor holds anything else.
+  const ownOption = h('option', { value: '' }, 'Your code');
   for (const ex of EXAMPLES) select.append(h('option', { value: ex.id }, ex.title));
-  const blurb = byId('example-blurb');
-  const matching = EXAMPLES.find((e) => e.source === initial);
-  if (matching) {
-    select.value = matching.id;
-    blurb.textContent = matching.blurb;
-  } else {
-    select.prepend(h('option', { value: '' }, 'Your code'));
+  const showOwn = (text: string, restore = false) => {
+    if (!ownOption.isConnected) select.prepend(ownOption);
     select.value = '';
-    blurb.textContent = shared !== null ? 'A program someone shared with you.' : 'Your own program, restored from last time.';
+    blurb.replaceChildren(text);
+    if (restore && backup !== null) {
+      const saved = backup;
+      blurb.append(
+        ' ',
+        h('button', {
+          type: 'button',
+          class: 'linkish',
+          onclick: () => {
+            backup = null;
+            loadProgram(saved);
+            showOwn('Your own program, restored.');
+          },
+        }, 'Restore my previous code'),
+      );
+    }
+  };
+  const showExample = (id: string) => {
+    const ex = EXAMPLES.find((e) => e.id === id)!;
+    ownOption.remove();
+    select.value = ex.id;
+    blurb.replaceChildren(ex.blurb);
+  };
+  const describeProgram = (source: string, isShared: boolean) => {
+    const matching = EXAMPLES.find((e) => e.source === source);
+    if (matching) showExample(matching.id);
+    else if (isShared) showOwn('A program someone shared with you.', true);
+    else showOwn('Your own program, restored from last time.');
+  };
+  function markEdited(doc: string) {
+    const current = EXAMPLES.find((e) => e.id === select.value);
+    if (current && current.source !== doc) showOwn('Your own program.');
   }
+  describeProgram(initial, shared !== null);
+
   select.addEventListener('change', () => {
-    const ex = EXAMPLES.find((e) => e.id === select.value);
-    if (!ex) return;
-    blurb.textContent = ex.blurb;
-    window.clearTimeout(pending);
-    editor.setDoc(ex.source);
-    window.clearTimeout(pending);
-    rebuild(ex.source);
-    saveDraft(ex.source);
+    if (!EXAMPLES.some((e) => e.id === select.value)) return;
+    const id = select.value;
+    loadProgram(EXAMPLES.find((e) => e.id === id)!.source);
+    showExample(id);
+  });
+
+  // A share link pasted into an already-open tab only changes the fragment.
+  window.addEventListener('hashchange', () => {
+    const incoming = takeSharedFromHash();
+    if (incoming === null) return;
+    const current = editor.getDoc();
+    if (current !== incoming) backup = current;
+    loadProgram(incoming);
+    describeProgram(incoming, true);
   });
 
   // Share link: the program travels in the URL fragment, never to a server.

@@ -125,7 +125,7 @@ export function formatValue(v: Value, quoteStrings = false): string {
 }
 
 /** The operand rendered for humans, e.g. `0 (42)` for a constant or `→ 12` for a jump. */
-export function formatOperand(chunk: Chunk, instr: Instr): string {
+export function formatOperand(chunk: Chunk, instr: Instr, addr: number): string {
   if (instr.arg === undefined) return '';
   switch (instr.op) {
     case 'CONST':
@@ -137,7 +137,7 @@ export function formatOperand(chunk: Chunk, instr: Instr): string {
       return `→ ${String(instr.arg).padStart(2, '0')}`;
     case 'GET_LOCAL':
     case 'SET_LOCAL': {
-      const local = chunk.locals.find((l) => l.slot === instr.arg && l.from <= addrOf(chunk, instr) && addrOf(chunk, instr) <= l.to);
+      const local = chunk.locals.find((l) => l.slot === instr.arg && l.from <= addr && addr <= l.to);
       return local ? `[${instr.arg}] ${local.name}` : `[${instr.arg}]`;
     }
     case 'CALL':
@@ -145,8 +145,4 @@ export function formatOperand(chunk: Chunk, instr: Instr): string {
     default:
       return String(instr.arg);
   }
-}
-
-function addrOf(chunk: Chunk, instr: Instr): number {
-  return chunk.code.indexOf(instr);
 }

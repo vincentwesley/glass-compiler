@@ -1,13 +1,14 @@
-import type {
-  BinaryOp,
-  Block,
-  Expr,
-  FnDecl,
-  If,
-  LogicalOp,
-  Node,
-  Program,
-  Stmt,
+import {
+  children,
+  type BinaryOp,
+  type Block,
+  type Expr,
+  type FnDecl,
+  type If,
+  type LogicalOp,
+  type Node,
+  type Program,
+  type Stmt,
 } from './ast';
 import type { Diagnostic } from './errors';
 import type { Span, Token, TokenKind } from './token';
@@ -67,7 +68,10 @@ const NOT_RIGHT = 7;
 const NEG_RIGHT = 15;
 const CALL_LEFT = 17;
 
+/** How deeply the parser may recurse (nested brackets, blocks, right-hand sides). */
 const MAX_DEPTH = 200;
+/** How deep the finished tree may be (long operator chains nest without recursing). */
+export const MAX_TREE_DEPTH = 300;
 
 const DESCRIBE: Partial<Record<TokenKind, string>> = {
   SEMI: '";"',
@@ -112,12 +116,31 @@ export function parse(tokens: Token[]): ParseResult {
     return fail(`Expected ${DESCRIBE[kind] ?? kind} ${context}, but found ${describe(peek())}.`);
   };
 
+  /** Depth of the subtree under each node, so very deep trees can be refused. */
+  const heights = new Map<number, number>();
+  /** The IDENT token behind each Variable node, so assignment can take it over. */
+  const nameTokens = new Map<number, Token>();
+
   /** Create a node, record it, and mark the given tokens as owned by it. */
   const make = <T extends Node>(fields: Omit<T, 'id'>, owned: Token[]): T => {
     const node = { id: nextId++, ...fields } as T;
+    const height = 1 + Math.max(0, ...children(node).map((c) => heights.get(c.node.id) ?? 0));
+    if (height > MAX_TREE_DEPTH) fail('This part of the program is nested too deeply to show.', node.span);
+    heights.set(node.id, height);
     nodes.set(node.id, node);
     for (const t of owned) tokenOwner[t.index] = node.id;
     return node;
+  };
+
+  /** Run a recursive parse step with a depth guard that is always unwound. */
+  const nested = <T>(what: string, parseStep: () => T): T => {
+    depth++;
+    try {
+      if (depth > MAX_DEPTH) fail(`This ${what} is nested too deeply.`);
+      return parseStep();
+    } finally {
+      depth--;
+    }
   };
 
   const span = (from: Span, to: Span): Span => ({ start: from.start, end: to.end });
@@ -125,8 +148,7 @@ export function parse(tokens: Token[]): ParseResult {
   // ---------- expressions (Pratt) ----------
 
   function expression(minBp = 0): Expr {
-    if (++depth > MAX_DEPTH) fail('This expression is nested too deeply.');
-    try {
+    return nested('expression', () => {
       let lhs = prefix();
       for (;;) {
         const t = peek();
@@ -146,7 +168,7 @@ export function parse(tokens: Token[]): ParseResult {
           const target = lhs as Extract<Expr, { type: 'Variable' }>;
           // The Assign node replaces the Variable: it owns the name token and "=".
           nodes.delete(target.id);
-          const nameToken = tokens.find((tk) => tokenOwner[tk.index] === target.id)!;
+          const nameToken = nameTokens.get(target.id)!;
           lhs = make<Expr>({ type: 'Assign', name: target.name, value: rhs, span: span(lhs.span, rhs.span) } as Omit<Expr, 'id'>, [nameToken, t]);
         } else if (info.op === 'and' || info.op === 'or') {
           lhs = make<Expr>({ type: 'Logical', op: info.op, left: lhs, right: rhs, span: span(lhs.span, rhs.span) } as Omit<Expr, 'id'>, [t]);
@@ -155,9 +177,7 @@ export function parse(tokens: Token[]): ParseResult {
         }
       }
       return lhs;
-    } finally {
-      depth--;
-    }
+    });
   }
 
   function prefix(): Expr {
@@ -171,8 +191,11 @@ export function parse(tokens: Token[]): ParseResult {
         return make<Expr>({ type: 'Literal', value: t.kind === 'TRUE', span: t.span } as Omit<Expr, 'id'>, [t]);
       case 'NIL':
         return make<Expr>({ type: 'Literal', value: null, span: t.span } as Omit<Expr, 'id'>, [t]);
-      case 'IDENT':
-        return make<Expr>({ type: 'Variable', name: t.lexeme, span: t.span } as Omit<Expr, 'id'>, [t]);
+      case 'IDENT': {
+        const v = make<Expr>({ type: 'Variable', name: t.lexeme, span: t.span } as Omit<Expr, 'id'>, [t]);
+        nameTokens.set(v.id, t);
+        return v;
+      }
       case 'MINUS':
       case 'NOT': {
         const operand = expression(t.kind === 'MINUS' ? NEG_RIGHT : NOT_RIGHT);
@@ -273,6 +296,10 @@ export function parse(tokens: Token[]): ParseResult {
   }
 
   function ifStmt(): If {
+    return nested('"else if" chain', ifStmtInner);
+  }
+
+  function ifStmtInner(): If {
     const kw = advance();
     const cond = expression();
     const then = block();
@@ -293,6 +320,10 @@ export function parse(tokens: Token[]): ParseResult {
   }
 
   function block(): Block {
+    return nested('block', blockInner);
+  }
+
+  function blockInner(): Block {
     const open = expect('LBRACE', 'to start a block');
     const body = statementsUntil('RBRACE');
     if (!at('RBRACE')) {
@@ -306,6 +337,12 @@ export function parse(tokens: Token[]): ParseResult {
   function statementsUntil(end: TokenKind | null): Stmt[] {
     const body: Stmt[] = [];
     while (!at('EOF') && (end === null || !at(end))) {
+      if (end === null && at('RBRACE')) {
+        // A closing brace at the top level has nothing to close.
+        const t = advance();
+        errors.push({ stage: 'parser', message: 'Unexpected "}" with no matching "{".', span: t.span });
+        continue;
+      }
       const startPos = pos;
       try {
         body.push(statement());
@@ -338,13 +375,9 @@ export function parse(tokens: Token[]): ParseResult {
   }
 
   const body = statementsUntil(null);
-  // Stray closing braces at the top level: report and skip so parsing continues.
-  while (!at('EOF')) {
-    const t = advance();
-    errors.push({ stage: 'parser', message: `Unexpected ${describe(t)} with no matching "{".`, span: t.span });
-    body.push(...statementsUntil(null));
-  }
   const eof = peek();
-  const program = make<Program>({ type: 'Program', body, span: { start: 0, end: eof.span.end } }, []);
+  // Built directly: the root is never refused, whatever the depth of its statements.
+  const program: Program = { id: nextId++, type: 'Program', body, span: { start: 0, end: eof.span.end } };
+  nodes.set(program.id, program);
   return { program, tokenOwner, nodes, errors };
 }

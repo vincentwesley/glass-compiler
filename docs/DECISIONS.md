@@ -174,3 +174,19 @@ copy by hand.
 Instead of arrows (which tangle in a scrolling list on a phone), each row a
 jump lands on shows the addresses that jump there (`◂ 13`), and selecting a
 jump outlines its landing row in lavender.
+
+## D20. Hostile input gets a message, never a crash
+
+Share links mean anyone can hand the compiler any text. The parser bounds its
+recursion (200 levels of brackets, blocks or `else if`) and the depth of the
+finished tree (300 levels, which also covers long operator chains such as
+`1 + 1 + …` that nest without recursing), reporting both as normal parser
+errors. `build()` additionally catches anything unexpected and returns a
+diagnostic, so a bad program can never break the page or poison the saved
+draft. Identical diagnostics are grouped in the list (×N) and the list stops
+at 30 entries.
+
+## D21. Share links never silently replace your work
+
+Opening a share link (on load, or pasted into an open tab) keeps the previous
+editor contents aside and offers "Restore my previous code" until you do.

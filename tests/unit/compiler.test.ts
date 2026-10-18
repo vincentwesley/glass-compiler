@@ -3,7 +3,7 @@ import { formatOperand, type Chunk } from '../../src/lang/bytecode';
 import { build } from '../../src/lang';
 
 const listing = (chunk: Chunk) =>
-  chunk.code.map((i) => (i.arg === undefined ? i.op : `${i.op} ${formatOperand(chunk, i)}`));
+  chunk.code.map((i, ip) => (i.arg === undefined ? i.op : `${i.op} ${formatOperand(chunk, i, ip)}`));
 
 const compileOk = (src: string) => {
   const b = build(src);
@@ -142,6 +142,14 @@ describe('compiler', () => {
         expect(node, `${chunk.name} ${instr.op}`).toBeDefined();
         expect(instr.span).toEqual(node!.span);
       }
+    }
+  });
+
+  it('never throws, even on pathological input', () => {
+    for (const src of ['{'.repeat(50000), '('.repeat(50000), `print 1${' + 1'.repeat(20000)};`, 'fn f() {'.repeat(5000)]) {
+      const b = build(src);
+      expect(b.diagnostics.length).toBeGreaterThan(0);
+      expect(b.trace).toBeNull();
     }
   });
 

@@ -144,7 +144,7 @@
 
 .editor {
   flex: 1 1 auto;
-  min-height: 260px;
+  min-height: 170px;
   border: 1px solid var(--line);
   background: var(--bg-deep);
 }
@@ -172,6 +172,7 @@
 }
 
 .diagnostics {
+  flex: none;
   margin: 8px 0 0;
   padding: 0;
   list-style: none;
@@ -200,6 +201,12 @@ li + li .diag {
 
 .diag-stage {
   color: var(--bad);
+}
+
+.diag-count {
+  margin-left: auto;
+  color: var(--ink-dim);
+  font-family: var(--font-mono);
 }
 
 .diag-pos {

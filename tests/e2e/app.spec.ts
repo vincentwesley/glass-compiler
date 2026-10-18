@@ -166,6 +166,51 @@ test('a share link opens the same program', async ({ page, context }) => {
   expect(other.url()).not.toContain('#code=');
 });
 
+test('a share link keeps your own code restorable', async ({ page }) => {
+  await open(page);
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.type('print "mine";');
+  await expect(page.locator('[data-testid="examples"]')).toHaveValue('');
+  await expect(page.locator('.chip-lex', { hasText: '"mine"' })).toBeVisible();
+
+  // Paste a share link into the already-open tab: only the fragment changes.
+  await page.evaluate(() => {
+    window.location.hash = '#code=' + btoa('print "theirs";').replace(/=+$/, '');
+  });
+  await expect(page.locator('.chip-lex', { hasText: '"theirs"' })).toBeVisible();
+  await expect(page.locator('#example-blurb')).toContainText('shared with you');
+  expect(page.url()).not.toContain('#code=');
+
+  await page.getByRole('button', { name: 'Restore my previous code' }).click();
+  await expect(page.locator('.chip-lex', { hasText: '"mine"' })).toBeVisible();
+});
+
+test('editing an example switches the menu to "Your code"', async ({ page }) => {
+  await open(page);
+  await expect(page.locator('[data-testid="examples"]')).toHaveValue('precedence');
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type('\nprint 4;');
+  await expect(page.locator('[data-testid="examples"]')).toHaveValue('');
+  await expect(page.locator('#example-blurb')).toHaveText('Your own program.');
+  await page.locator('[data-testid="examples"]').selectOption('countdown');
+  await expect(page.locator('[data-testid="examples"] option[value=""]')).toHaveCount(0);
+});
+
+test('absurdly nested code is reported, not crashed on', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.addInitScript(() => localStorage.setItem('glass-tour-done', '1'));
+  await page.goto('./#code=' + Buffer.from('{'.repeat(20000)).toString('base64url'));
+  await expect(page.locator('#source-status')).toHaveText(/problem/);
+  await expect(page.locator('.diag', { hasText: 'nested too deeply' })).toHaveCount(1);
+  await expect(page.locator('.diag-count').first()).toHaveText('×200');
+  // And the next visit still works.
+  await page.goto('./');
+  await expect(page.locator('#source-status')).toHaveText(/problem/);
+  expect(errors).toEqual([]);
+});
+
 test('the draft survives a reload', async ({ page }) => {
   await open(page);
   await page.locator('.cm-content').click();

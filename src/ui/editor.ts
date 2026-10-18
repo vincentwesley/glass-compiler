@@ -97,6 +97,8 @@ export function createEditor(parent: HTMLElement, initial: string, onChange: (do
         const head = u.state.selection.main.head;
         queueMicrotask(() => {
           const s = store.state;
+          // Mid-edit, the last build describes older text; its offsets would point at the wrong token.
+          if (s.build.source !== view.state.doc.toString()) return;
           const tok = s.links.tokenAt(head);
           const owner = tok ? s.build.tokenOwner[tok.index] : undefined;
           store.select(owner !== undefined && owner >= 0 ? owner : null, 'editor');

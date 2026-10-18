@@ -151,14 +151,50 @@ describe('parser: statements', () => {
   });
 
   it('reports stray closing braces and keeps parsing', () => {
-    const { program, errors } = parseSrc('} print 1;');
-    expect(errors).toHaveLength(1);
-    expect(program.body).toHaveLength(1);
+    const { program, errors } = parseSrc('print 1; } print 2;');
+    expect(errors.map((e) => e.message)).toEqual(['Unexpected "}" with no matching "{".']);
+    expect(errors[0]!.span).toEqual({ start: 9, end: 10 });
+    expect(program.body).toHaveLength(2);
   });
 
   it('never loops forever on garbage', () => {
     const { errors } = parseSrc(') ) , ; = else { fn ( let');
     expect(errors.length).toBeGreaterThan(0);
+  });
+});
+
+describe('parser: pathological input', () => {
+  it('survives thousands of nested blocks', () => {
+    const { errors } = parseSrc('{'.repeat(20000));
+    expect(errors.some((e) => e.message.includes('block is nested too deeply'))).toBe(true);
+  });
+
+  it('survives thousands of nested brackets', () => {
+    const { errors } = parseSrc(`print ${'('.repeat(20000)}1;`);
+    expect(errors.some((e) => e.message.includes('nested too deeply'))).toBe(true);
+  });
+
+  it('survives a very long else-if chain', () => {
+    const src = `if a { }${' else if a { }'.repeat(5000)}`;
+    expect(parseSrc(src).errors.some((e) => e.message.includes('nested too deeply'))).toBe(true);
+  });
+
+  it('refuses operator chains too deep to draw', () => {
+    const { program, errors } = parseSrc(`print 1${' + 1'.repeat(5000)}; print 2;`);
+    expect(errors[0]!.message).toContain('nested too deeply to show');
+    // Recovery keeps the rest of the program.
+    expect(program.body).toHaveLength(1);
+  });
+
+  it('accepts chains up to the limit', () => {
+    expect(parseSrc(`print 1${' + 1'.repeat(150)};`).errors).toEqual([]);
+  });
+
+  it('does not use up the depth budget after a too-deep error', () => {
+    const deep = (n: number) => `print ${'('.repeat(n)}1${')'.repeat(n)};`;
+    const { errors } = parseSrc(deep(250) + deep(250) + deep(199));
+    expect(errors).toHaveLength(2);
+    expect(errors.every((e) => e.span.start < deep(250).length * 2)).toBe(true);
   });
 });
 

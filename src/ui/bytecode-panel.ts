@@ -44,13 +44,15 @@ export function mountBytecode(body: HTMLElement, count: HTMLElement, help: HTMLE
       chunk.code.forEach((instr, ip) => {
         if (JUMPS.has(instr.op)) {
           const target = instr.arg as number;
-          sources.set(target, [...(sources.get(target) ?? []), ip]);
+          const froms = sources.get(target);
+          if (froms) froms.push(ip);
+          else sources.set(target, [ip]);
         }
       });
       chunk.code.forEach((instr, ip) => {
         total++;
         const from = sources.get(ip);
-        const operand = formatOperand(chunk, instr);
+        const operand = formatOperand(chunk, instr, ip);
         const row = h(
           'button',
           { type: 'button', class: `instr op-${instr.op}`, 'data-node': instr.nodeId, 'data-key': instrKey(chunk.index, ip) },
@@ -67,10 +69,11 @@ export function mountBytecode(body: HTMLElement, count: HTMLElement, help: HTMLE
         hl.add(instr.nodeId, row);
         section.append(row);
       });
-      chunk.code.forEach((instr, ip) => {
-        const target = JUMPS.has(instr.op) ? rows.get(instrKey(chunk.index, instr.arg as number)) : undefined;
-        if (target) jumpTargets.set(instrKey(chunk.index, ip), target);
-      });
+      // Now that every row exists, link each jump to the row it lands on.
+      for (const [target, froms] of sources) {
+        const row = rows.get(instrKey(chunk.index, target));
+        if (row) for (const ip of froms) jumpTargets.set(instrKey(chunk.index, ip), row);
+      }
       list.append(section);
     }
     if (build.diagnostics.length > 0) {
