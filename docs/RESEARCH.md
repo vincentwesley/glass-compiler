@@ -54,10 +54,11 @@ way it does.
 
 ## Technology notes
 
-- **CodeMirror 6** injects its base theme through `style-mod`, which uses
-  constructable stylesheets (`adoptedStyleSheets`) where supported, and sets
-  sizes through the CSSOM. Neither is blocked by a `style-src 'self'` CSP in
-  Chromium; this was verified with Playwright (see `docs/DECISIONS.md`).
+- **CodeMirror 6** injects its base theme through `style-mod`. In a normal
+  document that is a `<style>` element, which a `style-src 'self'` CSP blocks
+  (confirmed in Chromium with Playwright). Inside a shadow root it uses
+  constructable stylesheets instead, which the CSP allows, so the editor is
+  mounted in a shadow root (see `docs/DECISIONS.md`, D11).
 - **GitHub Pages ignores `_headers` files**, so CSP must be a
   `<meta http-equiv="Content-Security-Policy">` tag. `frame-ancestors` cannot be
   set from a meta tag; that limitation is accepted.

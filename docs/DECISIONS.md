@@ -109,10 +109,18 @@ font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self';
 form-action 'none'; manifest-src 'self'; worker-src 'none'
 ```
 
-No inline scripts and no third-party hosts. The no-flash theme loader is an
-external file (`public/theme-init.js`). CodeMirror's injected styles use
-constructable stylesheets and CSSOM, which `style-src 'self'` allows; the e2e
-suite fails if the browser reports any CSP violation.
+No inline scripts, no inline styles and no third-party hosts. The no-flash
+theme loader is an external file (`public/theme-init.js`).
+
+CodeMirror injects its base styles with a `<style>` element when mounted in the
+document, which `style-src 'self'` blocks (verified in Chromium). Rather than
+weakening the policy with `'unsafe-inline'`, the editor is mounted inside a
+**shadow root**: there CodeMirror uses constructable stylesheets
+(`adoptedStyleSheets`), which the policy allows. All editor styling therefore
+lives in `EditorView.theme` (in `src/ui/editor.ts`), using the page's CSS
+custom properties, which inherit into the shadow tree. No code sets `style`
+attributes; positions use the CSSOM or SVG attributes. The e2e suite fails if
+the browser logs any CSP violation.
 
 ## D12. Dark by default, light only by choice
 
@@ -131,3 +139,23 @@ tests and build (as requested); browser tests run locally before each push.
 At 375px all stages stay visible in one scrolling column rather than hiding
 behind tabs, so clicking a token still visibly lights up the other stages
 below it. A "jump to stage" bar at the top scrolls to each panel.
+
+## D15. Accessible names come from visible text
+
+Token chips, bytecode rows and tree nodes take their accessible names from
+their visible text (axe's `label-content-name-mismatch` rule), with extra
+detail in `title` (tokens) or an SVG `<title>` (tree nodes). Each panel is one
+tab stop with arrow-key movement inside (roving tabindex), so keyboard users
+aren't forced through hundreds of tab stops.
+
+## D16. Selecting something can move the VM ("Follow selection")
+
+By default, selecting a token, node or instruction jumps the VM to the next
+step that runs it, so the VM panel lights up too. It is a checkbox in the VM
+panel for people who want to keep the machine where it is. Moving the editor
+cursor never moves the VM.
+
+## D17. The tree zooms to fit
+
+The tree picks the largest zoom (60–100%) that fits the panel, until the user
+zooms by hand, and starts scrolled so the root is in view.

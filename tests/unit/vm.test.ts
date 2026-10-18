@@ -218,3 +218,12 @@ describe('vm: trace', () => {
     expect(t.snapshots[0]!.globals).toEqual([]);
   });
 });
+
+describe('README', () => {
+  it('shows a Pane sample that compiles and runs', async () => {
+    const { readFileSync } = await import('node:fs');
+    const readme = readFileSync(new URL('../../README.md', import.meta.url), 'utf8');
+    const sample = /```pane\n([\s\S]*?)```/.exec(readme)![1]!;
+    expect(out(sample)).toEqual(['hello, pane', 'fib(0) = 0', 'fib(1) = 1', 'fib(2) = 1', 'fib(3) = 2', 'fib(4) = 3', 'fib(5) = 5', 'fib(6) = 8', 'fib(7) = 13']);
+  });
+});
