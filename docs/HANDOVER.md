@@ -15,6 +15,18 @@
   `docs/screenshots/` (regenerate with `SCREENSHOTS=1 npm run test:e2e -- screenshots`).
   Pull request opened from `claude/friendly-thompson-jh0adm` to `main`.
 
+- **Follow-up (after the MVP PR): done.** Jump-target markers in the bytecode
+  panel and share links that carry the program in the URL fragment
+  (`src/ui/share.ts`), with unit and e2e tests.
+
+## GitHub Actions minutes
+
+The account has **no Actions minutes left this month** (as of 2026-10-18), so
+CI and the Pages deploy won't run until they reset. Until then, verify locally
+before every push: `npm run verify` and `npm run test:e2e`. The deploy
+workflow can be run by hand from the Actions tab (`workflow_dispatch`) once
+minutes are available, or a later push to `main` will deploy.
+
 ## One-time step for the repo owner
 
 In GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
@@ -26,8 +38,6 @@ be run by hand from the Actions tab).
 
 - Run the Playwright/axe suite in CI too (needs `npx playwright install
   chromium` in the workflow; deliberately left out of the requested CI).
-- Arrows for jump targets in the bytecode panel.
-- A "share" link that encodes the program in the URL hash.
 - `for` loops and arrays in Pane, if they can be shown without clutter.
 
 ## Known issues

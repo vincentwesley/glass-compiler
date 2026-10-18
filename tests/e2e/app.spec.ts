@@ -138,6 +138,34 @@ test('runtime errors point back at the code', async ({ page }) => {
   await expect(page.locator('.tnode.is-selected')).toHaveText(/Binary.*\//);
 });
 
+test('jump instructions mark where they land', async ({ page }) => {
+  await open(page);
+  await page.locator('[data-testid="examples"]').selectOption('countdown');
+  const loop = page.locator('.instr', { hasText: 'LOOP' });
+  await expect(page.locator('.jump-from')).toHaveCount(2);
+  // Selecting LOOP selects its While node, which owns both of the loop's jumps:
+  // the exit (JUMP_IF_FALSE) and the way back (LOOP).
+  await loop.click();
+  await expect(page.locator('.instr.is-target')).toHaveCount(2);
+  await expect(page.locator('.instr.is-target .jump-from').first()).toContainText(await loop.locator('.addr').innerText());
+});
+
+test('a share link opens the same program', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await open(page);
+  await page.locator('[data-testid="examples"]').selectOption('fizzbuzz');
+  await page.locator('#share').click();
+  await expect(page.locator('#share-status')).toHaveText(/Link copied|Copy the link below/);
+  const url = await page.locator('#share-url').inputValue();
+  expect(url).toContain('#code=');
+
+  const other = await context.newPage();
+  await other.goto(url);
+  await expect(other.locator('#example-blurb')).toContainText('Remainders');
+  await expect(other.locator('.chip-lex', { hasText: 'FizzBuzz' })).toBeVisible();
+  expect(other.url()).not.toContain('#code=');
+});
+
 test('the draft survives a reload', async ({ page }) => {
   await open(page);
   await page.locator('.cm-content').click();

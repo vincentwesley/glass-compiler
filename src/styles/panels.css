@@ -153,6 +153,24 @@
   .editor { height: 300px; flex: none; }
 }
 
+.share-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 10px;
+}
+
+.share-field input {
+  width: 100%;
+  margin-top: 6px;
+  padding: 4px 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg-deep);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
 .diagnostics {
   margin: 8px 0 0;
   padding: 0;
@@ -463,7 +481,7 @@ li + li .diag {
 
 .instr {
   display: grid;
-  grid-template-columns: 2.6em 9.5em minmax(0, 1fr);
+  grid-template-columns: 2.6em 9.5em minmax(0, 1fr) auto;
   align-items: baseline;
   width: 100%;
   padding: 2px 6px;
@@ -537,6 +555,19 @@ li + li .diag {
 
 .instr.is-selected {
   outline-offset: -2px;
+}
+
+.jump-from {
+  color: var(--lav-ink);
+  font-size: 11.5px;
+}
+
+.instr.is-target {
+  border-left-color: var(--lav);
+}
+
+.instr.is-target .jump-from {
+  font-weight: 700;
 }
 
 .help-op {
@@ -774,7 +805,7 @@ li + li .diag {
   }
 
   .instr {
-    grid-template-columns: 2.4em 8.6em minmax(0, 1fr);
+    grid-template-columns: 2.4em 8.6em minmax(0, 1fr) auto;
     font-size: 12.5px;
   }
 }

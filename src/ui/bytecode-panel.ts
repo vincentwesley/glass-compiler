@@ -3,11 +3,17 @@ import { h, resetRoving, revealInPanel, roving } from './dom';
 import { NodeHighlighter } from './highlight';
 import type { Store } from './store';
 
+const JUMPS = new Set(['JUMP', 'JUMP_IF_FALSE', 'JUMP_IF_TRUE', 'LOOP']);
+const pad = (n: number) => String(n).padStart(2, '0');
+
 /** Stage 3: bytecode, one section per chunk (main plus one per function). */
 export function mountBytecode(body: HTMLElement, count: HTMLElement, help: HTMLElement, store: Store) {
   const hl = new NodeHighlighter();
   const rows = new Map<string, HTMLElement>();
   let pc: HTMLElement | undefined;
+  /** Jump instruction key → the row it jumps to. */
+  const jumpTargets = new Map<string, HTMLElement>();
+  let litTargets: HTMLElement[] = [];
   const list = h('div', { class: 'chunks', role: 'group', 'aria-label': 'Bytecode instructions. Use arrow keys to move.' });
   body.append(list);
   roving(list, '.instr');
@@ -21,6 +27,7 @@ export function mountBytecode(body: HTMLElement, count: HTMLElement, help: HTMLE
     const { build } = store.state;
     hl.reset();
     rows.clear();
+    jumpTargets.clear();
     pc = undefined;
     list.replaceChildren();
     let total = 0;
@@ -32,8 +39,17 @@ export function mountBytecode(body: HTMLElement, count: HTMLElement, help: HTMLE
           h('p', { class: 'consts' }, h('span', { class: 'pixel-label' }, 'Constants'), ' ', chunk.constants.map((c, i) => `#${i} ${formatValue(c, true)}`).join('   ')),
         );
       }
+      // Which addresses are jumped to, and from where, so targets can be marked.
+      const sources = new Map<number, number[]>();
+      chunk.code.forEach((instr, ip) => {
+        if (JUMPS.has(instr.op)) {
+          const target = instr.arg as number;
+          sources.set(target, [...(sources.get(target) ?? []), ip]);
+        }
+      });
       chunk.code.forEach((instr, ip) => {
         total++;
+        const from = sources.get(ip);
         const operand = formatOperand(chunk, instr);
         const row = h(
           'button',
@@ -43,10 +59,17 @@ export function mountBytecode(body: HTMLElement, count: HTMLElement, help: HTMLE
           h('span', { class: 'op' }, instr.op),
           ' ',
           h('span', { class: 'operand' }, operand),
+          from
+            ? h('span', { class: 'jump-from', title: `Jumped to from ${from.map(pad).join(', ')}` }, ` ◂ ${from.map(pad).join(' ')}`)
+            : null,
         );
         rows.set(instrKey(chunk.index, ip), row);
         hl.add(instr.nodeId, row);
         section.append(row);
+      });
+      chunk.code.forEach((instr, ip) => {
+        const target = JUMPS.has(instr.op) ? rows.get(instrKey(chunk.index, instr.arg as number)) : undefined;
+        if (target) jumpTargets.set(instrKey(chunk.index, ip), target);
       });
       list.append(section);
     }
@@ -75,6 +98,11 @@ export function mountBytecode(body: HTMLElement, count: HTMLElement, help: HTMLE
       const exec = s.links.instrAtStep(s.step);
       pc = exec ? rows.get(instrKey(exec.chunk, exec.ip)) : undefined;
       pc?.classList.add('is-pc');
+      // Mark where the selected (or about-to-run) jumps land.
+      for (const el of litTargets) el.classList.remove('is-target');
+      const keys = [...(s.selected !== null ? (s.links.instrsByNode.get(s.selected) ?? []) : []), ...(exec ? [instrKey(exec.chunk, exec.ip)] : [])];
+      litTargets = keys.map((k) => jumpTargets.get(k)).filter((el): el is HTMLElement => el !== undefined);
+      for (const el of litTargets) el.classList.add('is-target');
       if (s.selected !== prev.selected && s.origin !== 'bytecode') revealInPanel(first);
       else if (s.step !== prev.step) revealInPanel(pc);
       showHelp();

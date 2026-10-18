@@ -25,6 +25,10 @@ together.
   marks above the timeline show when the selected code ran.
 - **See why precedence works.** Open *Binding powers* in the tree panel for the
   numbers the Pratt parser uses to decide that `1 + 2 * 3` multiplies first.
+- **Follow the jumps.** Rows that a jump lands on are marked with where the
+  jump comes from (`◂ 13`), and selecting a jump highlights its landing row.
+- **Share a program.** *Copy share link* puts your code in the link itself
+  (after the `#`), so it never passes through a server.
 - **Learn from examples.** Precedence, variables and scope, a countdown loop,
   FizzBuzz and recursive Fibonacci are built in, and a short guided tour runs on
   your first visit (restart it with **Tour**).
@@ -79,7 +83,8 @@ while i < 8 {
 ## Privacy and security
 
 Glass Compiler is a static page. It has no server, no accounts, no analytics and
-makes no network requests after loading. Your code runs in a small virtual
+makes no network requests after loading. Share links carry the program in the
+part of the URL after `#`, which browsers don't send to servers. Your code runs in a small virtual
 machine written in TypeScript (never `eval`) and your latest draft is kept only
 in your own browser's local storage. A strict Content Security Policy blocks
 inline scripts and third-party hosts. See [SECURITY.md](SECURITY.md) to report

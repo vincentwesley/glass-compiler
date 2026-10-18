@@ -159,3 +159,18 @@ cursor never moves the VM.
 
 The tree picks the largest zoom (60–100%) that fits the panel, until the user
 zooms by hand, and starts scrolled so the root is in view.
+
+## D18. Share links use the URL fragment
+
+A shared program is UTF-8 → base64url in `#code=...`. The fragment is never
+sent to a server, so sharing needs no backend and leaks nothing to GitHub
+Pages logs. On load the program becomes the local draft and the fragment is
+removed from the address bar, so later edits aren't confused with the link.
+If the clipboard API is unavailable, the link is shown in a read-only field to
+copy by hand.
+
+## D19. Jump targets are marked, not drawn
+
+Instead of arrows (which tangle in a scrolling list on a phone), each row a
+jump lands on shows the addresses that jump there (`◂ 13`), and selecting a
+jump outlines its landing row in lavender.
