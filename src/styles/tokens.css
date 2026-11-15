@@ -1,0 +1,98 @@
+/* Design tokens. Dark is the default and needs no JavaScript; the mint light
+   theme only applies when the toggle sets data-theme="light" on <html>. */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #11150e;
+  --bg-deep: #0b0e09;
+  --surface: #151b12;
+  --surface-2: #1b2317;
+  --surface-3: #222c1d;
+  --grid: rgba(79, 224, 160, 0.045);
+
+  --ink: #e7f3ea;
+  --ink-dim: #a9bdaf;
+  --ink-faint: #8aa092;
+
+  --accent: #4fe0a0;
+  --accent-ink: #4fe0a0;
+  --accent-soft: rgba(79, 224, 160, 0.16);
+  --accent-glow: rgba(79, 224, 160, 0.22);
+  --on-accent: #0b1a12;
+
+  --peach: #e9a07f;
+  --peach-ink: #e9a07f;
+  --peach-soft: rgba(233, 160, 127, 0.18);
+
+  --lav: #a996e0;
+  --lav-ink: #b8a8ea;
+  --lav-soft: rgba(169, 150, 224, 0.17);
+
+  --bad: #ff9787;
+  --bad-soft: rgba(255, 151, 135, 0.14);
+
+  --line: rgba(79, 224, 160, 0.22);
+  --line-strong: rgba(79, 224, 160, 0.5);
+  --btn-shadow: var(--accent);
+
+  /* token colours, shared by the editor and the Tokens panel */
+  --c-keyword: #b8a8ea;
+  --c-literal: #e9a07f;
+  --c-string: #d9de84;
+  --c-name: #e7f3ea;
+  --c-operator: #4fe0a0;
+  --c-punct: #a9bdaf;
+
+  --font-head: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-pixel: 'Silkscreen', ui-monospace, monospace;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --gutter: 24px;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #e4f4ea;
+  --bg-deep: #d3ecdd;
+  --surface: #f5fcf8;
+  --surface-2: #eaf7f0;
+  --surface-3: #dcf0e4;
+  --grid: rgba(17, 21, 14, 0.05);
+
+  --ink: #11150e;
+  --ink-dim: #384d40;
+  --ink-faint: #4d6355;
+
+  --accent: #4fe0a0;
+  --accent-ink: #0a6e47;
+  --accent-soft: rgba(79, 224, 160, 0.3);
+  --accent-glow: rgba(10, 110, 71, 0.16);
+  --on-accent: #0b1a12;
+
+  --peach: #e9a07f;
+  --peach-ink: #9a4320;
+  --peach-soft: rgba(233, 160, 127, 0.3);
+
+  --lav: #a996e0;
+  --lav-ink: #573fa6;
+  --lav-soft: rgba(169, 150, 224, 0.28);
+
+  --bad: #b42d1c;
+  --bad-soft: rgba(180, 45, 28, 0.1);
+
+  --line: rgba(17, 21, 14, 0.16);
+  --line-strong: rgba(10, 110, 71, 0.55);
+  --btn-shadow: #11150e;
+
+  --c-keyword: #573fa6;
+  --c-literal: #9a4320;
+  --c-string: #5f5a00;
+  --c-name: #11150e;
+  --c-operator: #0a6e47;
+  --c-punct: #384d40;
+}

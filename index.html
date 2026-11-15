@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; manifest-src 'self'; worker-src 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#11150e" />
+    <title>Glass Compiler</title>
+    <meta
+      name="description"
+      content="A compiler you can see through. Write Pane code and watch it become tokens, a syntax tree, bytecode and a running stack machine, with every stage linked."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script src="/theme-init.js"></script>
+    <script type="module" src="/src/ui/main.ts"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#panel-source">Skip to the editor</a>
+
+    <header class="masthead">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges">
+          <rect x="1" y="1" width="14" height="14" class="logo-frame" />
+          <rect x="7" y="2" width="2" height="12" class="logo-bar" />
+          <rect x="2" y="7" width="12" height="2" class="logo-bar" />
+          <rect x="3" y="3" width="2" height="2" class="logo-peach" />
+          <rect x="11" y="11" width="2" height="2" class="logo-lav" />
+        </svg>
+        <div>
+          <h1 class="title">Glass Compiler</h1>
+          <p class="tagline">A compiler you can see through. Write <strong>Pane</strong>, watch every stage.</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <label class="field">
+          <span class="pixel-label">Example</span>
+          <select id="examples" class="select" data-testid="examples"></select>
+        </label>
+        <button id="tour-start" type="button" class="btn">Tour</button>
+        <button id="theme-toggle" type="button" class="btn" aria-pressed="false">
+          <span class="theme-icon" aria-hidden="true"></span><span class="theme-text">Light theme</span>
+        </button>
+      </div>
+    </header>
+
+    <nav class="rail" aria-label="Compiler stages">
+      <ol>
+        <li><a href="#panel-source"><span class="pixel-label">00</span> Source</a></li>
+        <li><a href="#panel-tokens"><span class="pixel-label">01</span> Tokens</a></li>
+        <li><a href="#panel-tree"><span class="pixel-label">02</span> Tree</a></li>
+        <li><a href="#panel-bytecode"><span class="pixel-label">03</span> Bytecode</a></li>
+        <li><a href="#panel-vm"><span class="pixel-label">04</span> VM</a></li>
+      </ol>
+    </nav>
+
+    <noscript>
+      <div class="card noscript">
+        <h2>JavaScript is needed</h2>
+        <p>
+          Glass Compiler runs its lexer, parser, compiler and virtual machine in your browser, so it needs
+          JavaScript turned on. Nothing is sent anywhere.
+        </p>
+      </div>
+    </noscript>
+
+    <main class="workspace">
+      <section id="panel-source" class="card panel panel-source" aria-labelledby="h-source" tabindex="-1">
+        <header class="panel-head">
+          <h2 id="h-source"><span class="pixel-label">00</span> Source</h2>
+          <span id="source-status" class="panel-meta" aria-live="polite"></span>
+        </header>
+        <p id="example-blurb" class="panel-sub"></p>
+        <div id="editor" class="editor"></div>
+        <ul id="diagnostics" class="diagnostics" aria-label="Problems" hidden></ul>
+        <div class="share-row">
+          <button id="share" type="button" class="btn btn-small">Copy share link</button>
+          <span id="share-status" class="small muted" role="status"></span>
+        </div>
+        <label class="share-field">
+          <span class="visually-hidden">Share link</span>
+          <input id="share-url" type="text" readonly hidden />
+        </label>
+        <p class="panel-foot small muted">Tip: press <kbd>Esc</kbd> then <kbd>Tab</kbd> to leave the editor.</p>
+      </section>
+
+      <section id="panel-tokens" class="card panel panel-tokens" aria-labelledby="h-tokens" tabindex="-1">
+        <header class="panel-head">
+          <h2 id="h-tokens"><span class="pixel-label">01</span> Tokens</h2>
+          <span class="panel-meta"><span id="tokens-count">0</span> tokens · lexer</span>
+        </header>
+        <div id="tokens-body" class="panel-body scroll"></div>
+      </section>
+
+      <section id="panel-tree" class="card panel panel-tree" aria-labelledby="h-tree" tabindex="-1">
+        <header class="panel-head">
+          <h2 id="h-tree"><span class="pixel-label">02</span> Syntax tree</h2>
+          <span class="panel-meta"><span id="tree-count">0</span> nodes · Pratt parser</span>
+          <div id="tree-tools" class="panel-tools"></div>
+        </header>
+        <div id="tree-body" class="panel-body scroll tree-scroll"></div>
+      </section>
+
+      <section id="panel-bytecode" class="card panel panel-bytecode" aria-labelledby="h-bytecode" tabindex="-1">
+        <header class="panel-head">
+          <h2 id="h-bytecode"><span class="pixel-label">03</span> Bytecode</h2>
+          <span class="panel-meta"><span id="bytecode-count">0</span> instructions · compiler</span>
+        </header>
+        <div id="bytecode-body" class="panel-body scroll"></div>
+        <p id="bytecode-help" class="panel-foot small" aria-live="polite"></p>
+      </section>
+
+      <section id="panel-vm" class="card panel panel-vm" aria-labelledby="h-vm" tabindex="-1">
+        <header class="panel-head">
+          <h2 id="h-vm"><span class="pixel-label">04</span> Virtual machine</h2>
+          <span class="panel-meta"><span id="vm-count">0</span> steps · stack VM</span>
+        </header>
+        <div id="vm-body" class="panel-body"></div>
+      </section>
+    </main>
+
+    <aside id="lineage" class="lineage" aria-label="Selection lineage" aria-live="polite"></aside>
+
+    <footer class="credits">
+      <p>
+        <span class="pixel-label">Glass Compiler</span> · made by Vincent Wesley · MIT licence ·
+        fonts under the <a href="licenses/FONTS-OFL.txt">SIL Open Font License</a>
+      </p>
+    </footer>
+  </body>
+</html>
