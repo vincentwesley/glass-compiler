@@ -115,6 +115,10 @@ The fonts (Space Grotesk, Inter, Silkscreen and JetBrains Mono) are bundled from
 [Fontsource](https://fontsource.org/) under the SIL Open Font License 1.1; their
 licence texts are in [public/licenses/FONTS-OFL.txt](public/licenses/FONTS-OFL.txt).
 
+## Credits
+
+Designed and built by Vin, Vin's Atelier (https://vwesley.dev). Logo by @portus_workstation / @wason25_pz (Instagram); the logo is all rights reserved (see NOTICE.md), not covered by the MIT licence.
+
 ---
 
-Made by Vincent Wesley.
+Made by Vin, Vin's Atelier.

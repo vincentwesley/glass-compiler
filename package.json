@@ -4,7 +4,7 @@
   "private": true,
   "description": "A compiler you can see through: watch Pane code become tokens, a syntax tree, bytecode and a running stack VM.",
   "license": "MIT",
-  "author": "Vincent Wesley",
+  "author": "Vin, Vin's Atelier (https://vwesley.dev)",
   "type": "module",
   "engines": {
     "node": ">=22.12"

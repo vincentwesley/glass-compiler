@@ -8,3 +8,11 @@ try {
 } catch {
   // Storage blocked: stay on the dark default.
 }
+try {
+  const logo = window.localStorage.getItem('logo-form');
+  if (logo === 'short' || logo === 'middle' || logo === 'long') {
+    document.documentElement.setAttribute('data-logo', logo);
+  }
+} catch {
+  // Storage blocked: the default (middle) logo form applies.
+}

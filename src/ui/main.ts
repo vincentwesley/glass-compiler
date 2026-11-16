@@ -9,6 +9,8 @@ import '../styles/tokens.css';
 import '../styles/base.css';
 import '../styles/components.css';
 import '../styles/panels.css';
+import '../brand/logo.css';
+import '../brand/logo-resize';
 
 import { build, lineCol } from '../lang';
 import { EXAMPLES } from '../examples';

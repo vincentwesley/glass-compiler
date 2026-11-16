@@ -56,3 +56,5 @@ be run by hand from the Actions tab).
 - Very wide trees (long programs) still need horizontal scrolling at 60% zoom.
 - CSP `frame-ancestors` can't be set from a meta tag, so the page could be
   framed by another site; GitHub Pages doesn't allow custom headers.
+
+- Brand: draggable Vin's Atelier logo + sign-off in the footer (`src/brand/`, `tests/e2e/logo.spec.ts`); pre-paint form in `public/theme-init.js`.
