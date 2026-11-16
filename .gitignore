@@ -12,3 +12,4 @@ playwright/.cache/
 *.local
 .vscode/
 .idea/
+qa-output/

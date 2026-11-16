@@ -49,6 +49,7 @@ be run by hand from the Actions tab).
 - `for` loops and arrays in Pane, if they can be shown without clutter.
 
 ## Known issues
+- 2026-11-16: milestone visual check clean (e2e 70 pass / 4 skip; 2 load timeouts pass alone; axe 0). `qa-output/` now gitignored. The Pages deploy workflow fails because Pages is not enabled for the repo.
 
 - `@playwright/test` is pinned to 1.56.1 (and `playwright-core` overridden to
   match) because that is the Chromium build pre-installed in the cloud session.
