@@ -59,3 +59,4 @@ be run by hand from the Actions tab).
   framed by another site; GitHub Pages doesn't allow custom headers.
 
 - Brand: draggable Vin's Atelier logo + sign-off in the footer (`src/brand/`, `tests/e2e/logo.spec.ts`); pre-paint form in `public/theme-init.js`.
+- 2026-11-17 hygiene sweep: dependabot added.
