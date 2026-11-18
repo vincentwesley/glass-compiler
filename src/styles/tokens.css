@@ -52,6 +52,18 @@
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --gutter: 24px;
+
+  /* canonical kit scales, added by the kit sync (the project keeps its own token names above) */
+  --s1: 0.25rem; --s2: 0.5rem; --s3: 0.75rem; --s4: 1rem; --s5: 1.5rem; --s6: 2rem;
+  --step--1: clamp(0.8rem, 0.78rem + 0.1vw, 0.875rem);
+  --step-0: 1rem;
+  --step-1: clamp(1.125rem, 1.07rem + 0.27vw, 1.3rem);
+  --step-2: clamp(1.3rem, 1.18rem + 0.6vw, 1.65rem);
+  --step-3: clamp(1.6rem, 1.35rem + 1.2vw, 2.25rem);
+  --step-4: clamp(2rem, 1.5rem + 2.4vw, 3.25rem);
+  --dur-fast: 120ms; --dur-open: 240ms;
+  --content-w: 68rem; --header-h: 3.5rem;
+  --z-nav: 10; --z-dialog: 50; --z-toast: 60;
 }
 
 :root[data-theme='light'] {

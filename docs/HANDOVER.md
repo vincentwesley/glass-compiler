@@ -60,3 +60,4 @@ be run by hand from the Actions tab).
 
 - Brand: draggable Vin's Atelier logo + sign-off in the footer (`src/brand/`, `tests/e2e/logo.spec.ts`); pre-paint form in `public/theme-init.js`.
 - 2026-11-17 hygiene sweep: dependabot added.
+- 2026-11-18: kit sync: project owns its token system (--surface/--ink, glass-theme key); only canonical scales/z/dur tokens added additively; components.css and theme-init intentionally not re-copied; zero pixel diff.
