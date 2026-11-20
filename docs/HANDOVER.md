@@ -51,9 +51,14 @@ be run by hand from the Actions tab).
 ## Known issues
 - 2026-11-16: milestone visual check clean (e2e 70 pass / 4 skip; 2 load timeouts pass alone; axe 0). `qa-output/` now gitignored. The Pages deploy workflow fails because Pages is not enabled for the repo.
 
-- `@playwright/test` is pinned to 1.56.1 (and `playwright-core` overridden to
-  match) because that is the Chromium build pre-installed in the cloud session.
-  Upgrading needs a matching browser.
+- `playwright-core` is overridden to follow `@playwright/test`
+  (`"$@playwright/test"`), so Dependabot bumps keep the two in step. (The
+  2026-11-17 bump to 1.65.1 had left the override at 1.56.1, which stopped the
+  e2e suite from starting.) When the sandbox's Chromium build doesn't match,
+  set `PW_CHROMIUM_PATH` (see CLAUDE.md); 2026-11-20: 72 pass / 4 skip against
+  build 1243.
+- The site is live at https://vincentwesley.github.io/glass-compiler/ (checked
+  2026-11-20 at 1440px and 375px: no console errors, fonts load).
 - Very wide trees (long programs) still need horizontal scrolling at 60% zoom.
 - CSP `frame-ancestors` can't be set from a meta tag, so the page could be
   framed by another site; GitHub Pages doesn't allow custom headers.

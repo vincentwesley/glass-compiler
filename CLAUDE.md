@@ -9,8 +9,10 @@ to GitHub Pages. Read `docs/HANDOVER.md` first when resuming work, then
 - `npm ci --ignore-scripts` — install (never run install scripts).
 - `npm run dev` — Vite dev server at `/glass-compiler/`.
 - `npm run verify` — typecheck, lint, unit tests, build. Run before every push.
-- `npm run test:e2e` — Playwright + axe against a production build (uses the
-  pre-installed Chromium; **never** run `playwright install`).
+- `npm run test:e2e` — Playwright + axe against a production build. **Never**
+  run `playwright install` in a cloud session: if the pre-installed Chromium
+  build differs from the one this Playwright version expects, point at it with
+  `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium-<build>/chrome-linux64/chrome`.
 
 ## Layout
 
