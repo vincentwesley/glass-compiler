@@ -20,6 +20,7 @@
     "@glass/ui": "1.0.0",
     "@codemirror/commands": "^6.11.1",
     "@codemirror/state": "^6.7.6",
-    "@codemirror/view": "^6.43.15"
+    "@codemirror/view": "^6.43.15",
+    "@glass/wasm-encode": "1.0.0"
   }
 }

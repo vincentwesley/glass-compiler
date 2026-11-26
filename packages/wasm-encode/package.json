@@ -1,0 +1,16 @@
+{
+  "name": "@glass/wasm-encode",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A small WebAssembly 1.0 module builder and binary encoder shared by the Glass compilers (Glass Compiler's Pane back end and Small C).",
+  "license": "MIT",
+  "author": "Vin, Vin's Atelier (https://vwesley.dev)",
+  "type": "module",
+  "exports": {
+    ".": "./src/encode.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  }
+}

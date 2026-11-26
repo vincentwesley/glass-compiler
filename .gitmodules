@@ -2,3 +2,6 @@
 	path = packages/wasm/spec
 	url = https://github.com/WebAssembly/spec
 	shallow = true
+[submodule "packages/small-c/testsuite"]
+	path = packages/small-c/testsuite
+	url = https://github.com/c-testsuite/c-testsuite

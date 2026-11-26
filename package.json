@@ -16,8 +16,10 @@
   },
   "workspaces": [
     "packages/glass-ui",
+    "packages/wasm-encode",
     "packages/compiler",
     "packages/wasm",
+    "packages/small-c",
     "packages/hub"
   ],
   "scripts": {
