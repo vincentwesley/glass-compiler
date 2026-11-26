@@ -32,8 +32,9 @@ pub fn to_string(x: f64) -> String {
 fn split_exp(s: &str) -> (String, i32) {
     let (mant, exp) = s.split_once('e').expect("exponential form");
     let digits: String = mant.chars().filter(|c| *c != '.').collect();
+    // Never empty: callers handle zero first, so the first digit is 1 to 9.
     (
-        digits.trim_end_matches('0').to_string().max("0".into()),
+        digits.trim_end_matches('0').to_string(),
         exp.parse().expect("exponent"),
     )
 }

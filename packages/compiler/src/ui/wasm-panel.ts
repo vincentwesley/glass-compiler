@@ -22,7 +22,8 @@ export function describeConst(bits: bigint, strings: (ptr: number) => string | u
 
 /** One instruction as text-format, with a comment decoding boxed constants. */
 export function insText(ins: Ins, strings: (ptr: number) => string | undefined): { text: string; note: string } {
-  const imm = (ins.imm ?? []).map(String).join(' ');
+  // i64 constants as signed decimal, as the text format (and Glass Wasm) shows them.
+  const imm = (ins.imm ?? []).map((x) => (ins.op === 'i64.const' ? BigInt.asIntN(64, BigInt(x)).toString() : String(x))).join(' ');
   const text = imm ? `${ins.op} ${imm}` : ins.op;
   const note = ins.op === 'i64.const' ? describeConst(BigInt(ins.imm![0]!), strings) : '';
   return { text, note };
@@ -89,7 +90,18 @@ export function mountWasm(body: HTMLElement, meta: HTMLElement, actions: HTMLEle
       showCheck({ kind: 'skipped', detail: '' });
       return;
     }
-    const out = compileToWasm(s.build.program, s.build.source);
+    let out: WasmOutput;
+    try {
+      out = compileToWasm(s.build.program, s.build.source);
+    } catch (e) {
+      list.replaceChildren(h('p', { class: 'note' }, `This program can't be compiled to WebAssembly: ${(e as Error).message}`));
+      runtime.replaceChildren();
+      meta.textContent = 'no module';
+      open.setAttribute('aria-disabled', 'true');
+      open.removeAttribute('href');
+      showCheck({ kind: 'skipped', detail: '' });
+      return;
+    }
     const strings = (ptr: number) => out.strings.get(ptr);
     const pane = out.functions.filter((f) => f.kind === 'pane');
     const rt = out.functions.filter((f) => f.kind === 'runtime');

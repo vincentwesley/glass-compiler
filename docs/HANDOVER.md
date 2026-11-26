@@ -140,7 +140,7 @@ robustness pass) is in `packages/compiler/docs/`.
 ## Verification for M3 (local, 2026-11-26)
 
 - Unit tests:
-  - Glass Compiler: 250 (83 new for the back end).
+  - Glass Compiler: 251 (84 new for the back end).
   - Glass Wasm: 27 (crate: 25).
   - Hub: 8.
   - glass-ui: 11.

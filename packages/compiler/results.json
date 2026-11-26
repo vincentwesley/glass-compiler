@@ -3,10 +3,10 @@
   "suites": [
     {
       "name": "Unit tests: lexer, parser, compiler, VM and UI logic",
-      "passed": 250,
+      "passed": 251,
       "failed": 0,
       "skipped": 0,
-      "total": 250
+      "total": 251
     }
   ]
 }

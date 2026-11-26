@@ -141,3 +141,12 @@ describe('source offsets', () => {
     expect(at[text.length]).toBe(enc(text));
   });
 });
+
+describe('limits', () => {
+  it('refuses a function with more than 255 parameters, with a reason', () => {
+    const params = Array.from({ length: 256 }, (_, i) => `p${i}`).join(', ');
+    const src = `fn f(${params}) {}`;
+    const b = build(src);
+    expect(() => compileToWasm(b.program, src)).toThrow(/at most 255/);
+  });
+});

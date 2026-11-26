@@ -79,6 +79,9 @@ export function compileToWasm(program: Program, source: string): WasmOutput {
     used.add(n);
     wasmName.set(f, n);
   }
+  // A function value packs its arity into 8 bits (runtime.ts); more parameters can't be represented.
+  const tooMany = fnDecls.find((f) => f.params.length > 255);
+  if (tooMany) throw new Error(`Pane function ${tooMany.name} has ${tooMany.params.length} parameters; WebAssembly output supports at most 255.`);
   const namesTable = strings.reserve(fnDecls.length);
   fnDecls.forEach((f, i) => strings.writeWord(namesTable + 4 * i, S(f.name)));
   const fnValue = (f: FnDecl) => FN | (BigInt(f.params.length) << 32n) | BigInt(fnDecls.indexOf(f));
