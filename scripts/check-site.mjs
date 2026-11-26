@@ -37,8 +37,11 @@ for (const file of files(root)) {
     for (const d of CSP_REQUIRED) if (!csp.includes(d)) problems.push(`${rel}: CSP lacks ${d}`);
     // 'wasm-unsafe-eval' (compile WebAssembly, nothing else) is allowed; JavaScript eval is not.
     if (/'unsafe-inline'|'unsafe-eval'|https?:/.test(csp)) problems.push(`${rel}: CSP allows inline code, eval or another host`);
-    // Pages that run WebAssembly: Glass Wasm, and Glass Compiler (it checks its Wasm back end in this browser).
-    const wasmPages = [`${SITE.base}wasm/`, `${SITE.base}index.html`];
+    // Pages that run WebAssembly: Glass Wasm, Small C, and Glass Compiler (it checks its Wasm back end in this browser).
+    const wasmPages = [`${SITE.base}wasm/`, `${SITE.base}small-c/`, `${SITE.base}index.html`];
+    // Workers only where a page runs untrusted programs off the main thread (Small C's Run panel).
+    const workerPages = [`${SITE.base}small-c/`];
+    if (/worker-src (?!'none')/.test(csp) && !workerPages.some((p) => rel.startsWith(p))) problems.push(`${rel}: only Small C may allow workers`);
     if (csp.includes("'wasm-unsafe-eval'") && !wasmPages.some((p) => rel.startsWith(p))) problems.push(`${rel}: only Wasm pages may allow 'wasm-unsafe-eval'`);
   }
   if (/<script(?![^>]*\bsrc=)(?![^>]*type="application\/ld\+json")[^>]*>/.test(html)) problems.push(`${rel}: inline <script>`);

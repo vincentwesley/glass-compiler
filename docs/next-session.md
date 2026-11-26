@@ -31,28 +31,32 @@
 
 ## Current state
 
-- **M1, M2 and M3 are done.**
-  - Glass Compiler (`/glass-compiler/`) compiles Pane to bytecode and to a real
-    WebAssembly module.
-  - Glass Wasm (`/glass-compiler/wasm/`) passes the WebAssembly 1.0 testsuite
-    (19,270 / 19,270) and debugs compiled Pane via "Open in Glass Wasm".
+- **M1 to M4 are done.**
+  - Glass Compiler (`/glass-compiler/`) compiles Pane to bytecode and WebAssembly.
+  - Glass Wasm (`/glass-compiler/wasm/`) passes the WebAssembly 1.0 testsuite and
+    debugs compiled Pane and C.
+  - Small C (`/glass-compiler/small-c/`) compiles C to WebAssembly; c-testsuite
+    220 / 220 on Node and on Glass Wasm.
   - The hub is at `/glass-compiler/series/`.
-- Next is **M4, Small C** (PLAN.md):
-  1. Create `packages/small-c/` with a C-subset compiler in TypeScript, scoped
-     like chibicc: lexer, preprocessor subset, parser, types, codegen to
-     WebAssembly. Reuse `packages/compiler/src/lang/wasm/encode.ts`; it can
-     move to glass-ui or a shared package once a second user exists.
-  2. Add c-testsuite as a pinned submodule (licences: THIRD_PARTY_NOTICES).
-     Run each test, record passes, and list every skipped test with its
-     reason, all via `scripts/record-results.mjs small-c`.
-  3. Add a page at `/glass-compiler/small-c/` (tokens, tree, generated Wasm)
-     and an "Open in Glass Wasm" link (Glass Wasm reads `glass.source` and
-     `glass.map`, so set language "c").
-  4. Small C programs need libc-style host imports (putchar/printf). Design a
-     `c` host next to `pane_host.rs` and record the decision.
+- Next is **M5, Glass Console** (PLAN.md):
+  1. Research first (RESEARCH.md §4 has the references): CHIP-8 then Game Boy.
+     Decide Rust-to-Wasm (like Glass Wasm) vs TypeScript, and record it.
+  2. Create `packages/console/` with a CHIP-8 core graded by test ROMs. Check
+     each ROM's licence before adding it (Timendus's suite is GPL-3.0: use at test
+     time only, as a submodule, never bundled, unless the licence allows).
+  3. Then the Game Boy: CPU, PPU, timers, APU, graded by Blargg and Mooneye ROMs
+     (licences to verify). Only freely licensed homebrew is bundled; never host
+     commercial ROMs.
+  4. Debugger page with registers, memory, tiles, sprites, click-a-pixel and the
+     four audio channels (muted by default).
+- Reusable pieces: `@glass/ui` (stepper, highlighter, tour, panels), the
+  `record-results.mjs` pattern, `check-site` rules, and the c-testsuite runner as a
+  model for a ROM runner.
 
 ## Known gaps
 
 - e2e runs locally, not in CI (deliberate, to save Actions minutes).
 - Wide syntax trees need horizontal scroll.
 - `frame-ancestors` can't be set on GitHub Pages.
+- Small C: grading on Glass Wasm takes about 20 s (8 queens alone is 1.1 billion
+  steps); the code generator does no optimisation.

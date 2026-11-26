@@ -6,6 +6,7 @@ on:
   pull_request:
     paths:
       - 'packages/wasm/**'
+      - 'packages/small-c/src/**'
       - 'packages/glass-ui/**'
       - 'scripts/record-results.mjs'
       - 'Cargo.toml'
@@ -22,6 +23,7 @@ on:
     branches: [main]
     paths:
       - 'packages/wasm/**'
+      - 'packages/small-c/src/**'
       - 'packages/glass-ui/**'
       - 'scripts/record-results.mjs'
       - 'Cargo.toml'

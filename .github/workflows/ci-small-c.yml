@@ -1,0 +1,94 @@
+name: CI · Small C
+
+# Runs only when this package, something it depends on, or the toolchain changes.
+# Glass Wasm is built too: it is the second engine c-testsuite runs on
+# (docs/DECISIONS.md S7). Everything here is also verified locally before a push.
+on:
+  pull_request:
+    paths:
+      - 'packages/small-c/**'
+      - 'packages/wasm-encode/**'
+      - 'packages/wasm/**'
+      - 'packages/glass-ui/**'
+      - 'scripts/record-results.mjs'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.gitmodules'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.base.json'
+      - 'eslint.config.js'
+      - '.nvmrc'
+      - '.github/workflows/ci-small-c.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'packages/small-c/**'
+      - 'packages/wasm-encode/**'
+      - 'packages/wasm/**'
+      - 'packages/glass-ui/**'
+      - 'scripts/record-results.mjs'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.gitmodules'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.base.json'
+      - 'eslint.config.js'
+      - '.nvmrc'
+      - '.github/workflows/ci-small-c.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-small-c-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Small C
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: true
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Rust toolchain (pinned in rust-toolchain.toml)
+        run: rustup toolchain install
+
+      - name: Build Glass Wasm for the browser (the second engine that grades Small C)
+        run: npm run build:wasm -w @glass/wasm
+
+      - name: c-testsuite on Node and on Glass Wasm, and recorded results are current
+        run: node scripts/record-results.mjs small-c --check
+
+      - name: Lint
+        run: npx eslint packages/small-c packages/wasm-encode
+
+      - name: Typecheck
+        run: |
+          npm run typecheck -w @glass/small-c
+          npm run typecheck -w @glass/wasm-encode
+
+      - name: Unit tests
+        run: |
+          npm test -w @glass/small-c
+          npm test -w @glass/wasm-encode
+
+      - name: Build
+        run: npm run build -w @glass/small-c

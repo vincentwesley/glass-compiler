@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; manifest-src 'self'; worker-src 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="author" content="Vin, Vin's Atelier" />
+    <link rel="author" href="/humans.txt" />
+    <meta name="theme-color" content="#11150e" />
+    <title>Small C · the Glass series</title>
+    <meta name="description" content="Small C, part of the Glass series: a compiler for most of C that shows its tokens, typed syntax tree and WebAssembly, graded by c-testsuite." />
+    <link rel="canonical" href="https://vincentwesley.github.io/glass-compiler/series/small-c/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Small C · the Glass series" />
+    <meta property="og:description" content="Small C, part of the Glass series: a compiler for most of C that shows its tokens, typed syntax tree and WebAssembly, graded by c-testsuite." />
+    <meta property="og:url" content="https://vincentwesley.github.io/glass-compiler/series/small-c/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script src="/theme-init.js"></script>
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body class="hub-page">
+    <a class="skip-link" href="#main">Skip to the content</a>
+    <header class="masthead">
+      <div class="brand">
+        <!-- glass:mark -->
+        <div>
+          <p class="title"><a class="title-link" href="/glass-compiler/series/">Glass</a></p>
+          <p class="tagline">Computers you can see through.</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="theme-toggle" type="button" class="btn" aria-pressed="false">
+          <span class="theme-icon" aria-hidden="true"></span><span class="theme-text">Light theme</span>
+        </button>
+      </div>
+    </header>
+
+    <main id="main" class="hub hub-member" tabindex="-1">
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/glass-compiler/series/">The Glass series</a></li>
+          <li><span aria-current="page">Small C</span></li>
+        </ol>
+      </nav>
+
+      <section class="hub-intro" aria-labelledby="h-member">
+        <p class="pixel-label">03 · Live</p>
+        <h1 id="h-member" class="hub-lead">Small C</h1>
+        <p>
+          A compiler for most of C, written from scratch in the spirit of chibicc: a preprocessor, a parser that works
+          out every type, and a code generator that writes real WebAssembly. Type C and watch its tokens, its typed
+          syntax tree and its WebAssembly, all linked, then run it in your browser or step through it in Glass Wasm.
+        </p>
+        <p class="member-actions">
+          <a class="btn btn-primary" href="/glass-compiler/small-c/">Open Small C</a>
+          <a class="btn" href="https://github.com/vincentwesley/glass-compiler/tree/main/packages/small-c">Source and README</a>
+        </p>
+      </section>
+
+      <figure class="shot card">
+        <img
+          src="../../../docs/screenshots/small-c-desktop-dark.png"
+          alt="Small C on a desktop: a C program in the editor, its typed syntax tree, the WebAssembly it compiles to and its output"
+          width="1440"
+          height="900"
+          loading="lazy"
+          decoding="async"
+        />
+      </figure>
+
+      <section class="hub-section" aria-labelledby="h-do">
+        <h2 id="h-do"><span class="pixel-label">01</span> What you can do</h2>
+        <ul class="how-list">
+          <li><strong>Write C.</strong> Structs, unions, pointers, function pointers, arrays, enums, bit-fields, <code>goto</code>, <code>switch</code>, variadic functions and the preprocessor, compiled as you type.</li>
+          <li><strong>See what C does for you.</strong> The tree shows every conversion C makes without being asked, like an <code>int</code> becoming a <code>double</code> or an array becoming a pointer.</li>
+          <li><strong>Read the WebAssembly.</strong> Click an instruction to see the C it came from. Scalars stay in named WebAssembly locals; arrays and structs live in a stack frame in memory.</li>
+          <li><strong>Run it, then step it.</strong> Programs run on your browser's engine, and <strong>Open in Glass Wasm</strong> lets you step through them one instruction at a time.</li>
+          <li><strong>Look inside printf.</strong> The C library is C too, compiled with your program; its <code>%f</code> prints a double's exact value, rounded the way glibc does.</li>
+        </ul>
+      </section>
+
+      <section class="hub-section" aria-labelledby="h-grade">
+        <h2 id="h-grade"><span class="pixel-label">02</span> How it's graded</h2>
+        <p class="hub-sub">
+          By c-testsuite's single-exec suite: 220 C programs from the tcc and scc compilers, each with the exact output it
+          must print. Every program is compiled by Small C and run twice, on Node's WebAssembly engine and on Glass Wasm.
+          Recorded by <code>scripts/record-results.mjs</code>.
+        </p>
+        <!-- hub:grade member="small-c" -->
+        <p class="small muted">
+          A test passes when its output (stdout and stderr) matches the <code>.expected</code> file byte for byte and it
+          exits with status 0. Any test that does not pass is listed on the Small C page with the reason.
+        </p>
+      </section>
+
+      <section class="hub-section" aria-labelledby="h-next">
+        <h2 id="h-next"><span class="pixel-label">03</span> What it leaves out</h2>
+        <p>
+          C11 threads and atomics, complex numbers, <code>setjmp</code>, wide-character library functions and real files
+          (<code>fopen</code> works on files in memory that last until the program ends). <code>long double</code> is a
+          plain <code>double</code>. Glass Kernel will run these programs with a real file system.
+        </p>
+      </section>
+    </main>
+
+    <footer class="credits">
+      <p>
+        <span class="pixel-label">The Glass series</span> · made by Vin, Vin's Atelier · MIT licence ·
+        <a href="https://github.com/vincentwesley/glass-compiler">source on GitHub</a> · fonts under the
+        <a href="../licenses/FONTS-OFL.txt">SIL Open Font License</a>
+      </p>
+      <!-- glass:credits project="Small C" -->
+    </footer>
+  </body>
+</html>

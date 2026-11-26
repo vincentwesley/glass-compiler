@@ -115,8 +115,12 @@ sign-off sits in the card's brand slot. The card's kit token names (`--fg`,
 - Pages that run Wasm add `'wasm-unsafe-eval'` to `script-src`. It allows
   compiling WebAssembly and nothing else; JavaScript `eval` stays blocked.
 - Since M3 that includes Glass Compiler, which runs its WebAssembly back end
-  on the browser's own engine to check it matches the VM. The hub keeps the
-  exact original policy, and `check-site` enforces which pages may add it.
+  on the browser's own engine to check it matches the VM, and (since M4) Small
+  C, which runs the programs it compiles. The hub keeps the exact original
+  policy, and `check-site` enforces which pages may add it.
+- Small C is also the only page allowed `worker-src 'self'`: its Run panel runs
+  the program in a Web Worker so a program that never ends can be stopped
+  (S19). `check-site` enforces that too.
 
 ## S9. Glass Wasm reads the official testsuite itself
 
@@ -176,7 +180,9 @@ stores a snapshot per step, which is fine for its small VM; WebAssembly programs
 touch up to 64 KiB pages of memory, so snapshots would cost too much. Measured on 2026-11-26 with the VM itself
 running as WebAssembly in Node, it does about 34 million steps a second. A
 replay to step 199,000 of a loop took 11.6 ms (a full run for the total plus the
-partial run), so scrubbing anywhere under the 200,000-step limit is instant.
+partial run), so scrubbing anywhere under the step limit is instant. The limit
+was 200,000 steps; M4 raised it to 1,000,000 because a C program's printf runs
+thousands of instructions (the trace costs 8 bytes a step, so 8 MB at most).
 A compact per-step
 trace (function, pc) of the full run drives the timeline ticks and "follow
 selection".
@@ -234,7 +240,7 @@ Glass Compiler compiles Pane to a WebAssembly 1.0 module
 
 ## S16. Where the WebAssembly build may differ from the VM (on purpose)
 
-- **Step limits.** The VM stops at 10,000 steps and Glass Wasm at 200,000, but a
+- **Step limits.** The VM stops at 10,000 steps and Glass Wasm at 1,000,000, but a
   browser's own engine has no limit. So Glass Compiler only runs the module on
   the browser's engine when the VM finished, and a runaway loop can never freeze
   the tab.
@@ -244,3 +250,76 @@ Glass Compiler compiles Pane to a WebAssembly 1.0 module
   Matching JavaScript exactly would need UTF-16 conversion in every comparison,
   so the difference is documented here instead.
 
+
+## S17. Small C: what it is, and the target it compiles for
+
+- **Scope.** Most of C11 as real programs use it, in the shape of chibicc
+  (RESEARCH §4): a lexer, a preprocessor with Prosser's hide-set algorithm, a
+  recursive-descent parser that types every node as it builds it, and a code
+  generator straight to WebAssembly. Written in TypeScript so it runs in the
+  page. GNU extensions that c-testsuite uses are supported (statement
+  expressions, `, ## __VA_ARGS__`, range designators, `__attribute__` is
+  skipped). Left out: threads and atomics, `_Complex`, `setjmp`, wide-character
+  library functions, computed goto, `sizeof` of a variable-length array.
+- **Target: wasm32, ILP32**, as clang's wasm32: `char` 1 (signed), `short` 2,
+  `int` and `long` 4, `long long` 8, pointers 4. `long double` is a plain
+  `double` (clang uses 128 bits; nothing here needs it, and a software 128-bit
+  float would dwarf the rest of the library).
+- **The C library is C**, compiled by Small C with each program, and only the
+  functions a program reaches are kept (a hello world is about 9 KB). This keeps
+  the "see through" promise: printf is there to read in Glass Wasm. Its `%f`,
+  `%e` and `%g` print a double's exact value, expanded with big-number
+  arithmetic, rounded half to even as glibc does; the maths functions use
+  fdlibm's polynomial kernels.
+- **Shared encoder.** The WebAssembly encoder moved from Glass Compiler to
+  `packages/wasm-encode` now that two compilers use it.
+
+## S18. Small C's code shape
+
+- **Locals.** A scalar whose address is never taken lives in a WebAssembly local
+  with its C name. Arrays, structs, unions and address-taken variables live in a
+  stack frame in linear memory, addressed from `$__fp`; the global `$sp` is the
+  stack pointer (1 MiB of stack, checked on entry: overflowing prints "stack
+  overflow" and exits with 139). Constant offsets fold into loads and stores.
+- **Control flow.** Structured wherever C is: `if`, loops and `switch` become
+  `block`/`loop`/`if`, and a dense `switch` one `br_table`. A function with
+  `goto`, or with case labels below the top of its `switch` (Duff's device),
+  becomes numbered blocks under one loop: `$__pc` names the block to run next
+  and `br_table` jumps to it. A statement expression with labels gets its own
+  such loop. Readable where possible, correct everywhere.
+- **Calls.** Arguments after `...` go into an area in the caller's frame, passed
+  as a last parameter; `va_list` is a pointer into it. Structs are passed as the
+  address of a copy, and returned through a hidden first parameter. A function
+  pointer is an index into the table, which starts at 1 so a null function
+  pointer traps.
+- **Memory.** Static data from 1024 (so small null-pointer offsets read zeros
+  rather than live data), then the stack, then the heap, which malloc grows with
+  `memory.grow` up to 128 MiB.
+
+## S19. The `c` host: two imports, files in memory
+
+- A compiled program imports exactly two functions from module `c`:
+  `write(fd, ptr, len)` for stdout and stderr, and `exit(code)`. Its memory is
+  its own export. The page's JavaScript host and Glass Wasm's `c_host.rs`
+  implement the same two, and the tests run every example on both.
+- `exit` ends the run with a status. Glass Wasm shows it as **Exited** with the
+  status, not as a trap.
+- There is no input, and `fopen` opens files in memory that last until the
+  program ends. Glass Kernel (M6) will give C programs a real file system.
+- The page runs programs in a Web Worker and stops one still running after four
+  seconds, so an endless loop never freezes the tab.
+
+## S20. How Small C is graded
+
+- c-testsuite's `single-exec` suite (220 programs from tcc and scc), pinned as a
+  submodule. A test passes when its combined stdout and stderr equal the
+  `.expected` file byte for byte and it exits with status 0, the suite's own
+  rule.
+- Every test runs twice: on Node's WebAssembly engine and on Glass Wasm (with a
+  5-billion-step cap; the 8-queens test takes 1.1 billion). The two must agree,
+  and `results.json` records any test where they don't.
+- Skips are only for tests that can never pass on this target, each with its
+  reason. None were needed: all 220 pass. Anything not passing is listed on the
+  page with the compiler's message.
+- The test programs are never shipped in the site (some are LGPL, from tcc);
+  only their names, counts and results are.

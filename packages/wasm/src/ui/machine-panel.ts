@@ -92,16 +92,17 @@ export function mountMachine(
     const atEnd = m.step >= m.total;
     const badge = !atEnd
       ? h('span', { class: 'badge badge-run' }, 'Running')
-      : m.finalStatus === 'finished'
-        ? h('span', { class: 'badge badge-done' }, 'Finished')
-        : h('span', { class: 'badge badge-err' }, m.finalStatus === 'trap' ? 'Trapped' : 'Stopped');
+      : m.finalStatus === 'finished' || (m.finalStatus === 'exited' && m.exit === 0)
+        ? h('span', { class: 'badge badge-done' }, m.finalStatus === 'exited' ? 'Exited' : 'Finished')
+        : h('span', { class: 'badge badge-err' }, m.finalStatus === 'trap' ? 'Trapped' : m.finalStatus === 'exited' ? 'Exited' : 'Stopped');
     const next = m.at
       ? [
           h('span', null, ' · next: ', h('button', { type: 'button', class: 'status-instr linkish', title: 'Select this instruction' }, `${instrText(s, m.at.func, m.at.pc)} (${funcName(s, m.at.func)} ${String(m.at.pc).padStart(2, '0')})`)),
         ]
       : [];
+    const exited = atEnd && m.finalStatus === 'exited' ? [` · exit status ${m.exit ?? '?'}`] : [];
     const result = atEnd && m.finalStatus === 'finished' ? [' · result: ', ...(m.results.length ? m.results.flatMap((v, i) => [i ? ', ' : '', valueEl(v)]) : ['none'])] : [];
-    status.replaceChildren(badge, ` Step ${m.step} of ${m.total}`, ...next, ...result);
+    status.replaceChildren(badge, ` Step ${m.step} of ${m.total}`, ...next, ...result, ...exited);
     errorBox.hidden = !(atEnd && m.trap);
     if (atEnd && m.trap) errorBox.replaceChildren(h('strong', null, m.finalStatus === 'trap' ? 'Trap: ' : 'Stopped: '), m.trap);
 

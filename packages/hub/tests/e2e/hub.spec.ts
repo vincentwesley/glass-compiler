@@ -61,7 +61,7 @@ test('every member is listed; only live ones link anywhere', async ({ page }) =>
   const members = page.locator('.members > li');
   await expect(members).toHaveCount(6);
   await expect(page.locator('.member-planned a')).toHaveCount(0);
-  await expect(page.locator('.member-live')).toHaveCount(2);
+  await expect(page.locator('.member-live')).toHaveCount(3);
 });
 
 test('the hub opens Glass Compiler, and Glass Compiler links back to the series', async ({ page }) => {

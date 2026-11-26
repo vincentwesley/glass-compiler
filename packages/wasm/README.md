@@ -39,6 +39,15 @@ stack and in locals read as Pane values, and selecting an instruction shows the
 Pane line it came from. The module imports a five-function `pane` host
 (`crate/src/pane_host.rs`), which Glass Wasm provides.
 
+## C programs, compiled
+
+Small C compiles C to WebAssembly, and its **Open in Glass Wasm** link opens the
+module here too. The Module panel shows the C source, selecting an instruction
+shows the C line it came from, and a program's output appears line by line as
+you step. A C program imports a two-function `c` host (`crate/src/c_host.rs`):
+`write` for stdout and stderr, and `exit`, which ends the run with **Exited** and
+its status.
+
 ## What's inside (`crate/`)
 
 | Module | What it does |
@@ -49,6 +58,7 @@ Pane line it came from. The module imports a five-function `pane` host
 | `runtime.rs` | Store, linking, instantiation, and a steppable interpreter with explicit stack, frames and labels |
 | `exec.rs`, `float.rs` | Numeric semantics: NaN propagation, signed zeros, ties-to-even, trapping conversions, correctly rounded literals |
 | `spec.rs` | The `.wast` script runner and the `spectest` host module |
+| `pane_host.rs`, `jsnum.rs`, `c_host.rs` | The hosts compiled Pane and C programs import |
 | `debug.rs`, `disasm.rs` | The debugger's view of a run: replay to any step, frames with named locals, the per-step trace |
 | `web.rs` | C-ABI exports for the page (no wasm-bindgen) |
 

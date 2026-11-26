@@ -17,7 +17,8 @@ before.
    - Go to https://github.com/vincentwesley/glass-compiler/settings/branches.
    - Edit the rule for `main`.
    - Under "Require status checks", remove "Typecheck, lint, test, build" and
-     add **"Glass Compiler"**, **"glass-ui"** and **"Hub and site"**.
+     add **"Glass Compiler"**, **"glass-ui"**, **"Glass Wasm"**, **"Small C"**
+     and **"Hub and site"** (one per package workflow).
 
    Path filters mean a check only appears when its package changed, so mark them
    required only if you are happy for docs-only PRs to show them as "expected".
