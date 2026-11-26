@@ -11,7 +11,11 @@ together.
 
 **Try it:** https://vincentwesley.github.io/glass-compiler/
 
-![Glass Compiler on a desktop, dark theme, with a + selected in the Fibonacci example](docs/screenshots/desktop-dark.png)
+Glass Compiler is part of **[the Glass series](https://vincentwesley.github.io/glass-compiler/series/)**:
+computers you can see through. Its shared debugger kit lives in
+[`packages/glass-ui`](../glass-ui).
+
+![Glass Compiler on a desktop, dark theme, with a + selected in the Fibonacci example](../../docs/screenshots/desktop-dark.png)
 
 ## What you can do
 
@@ -38,7 +42,7 @@ Colour key: **mint** is what you selected, **lavender** is inside it, and
 
 | Desktop, light theme | Phone, dark theme |
 | --- | --- |
-| ![Light theme on desktop](docs/screenshots/desktop-light.png) | ![Dark theme at 375px wide](docs/screenshots/mobile-dark.png) |
+| ![Light theme on desktop](../../docs/screenshots/desktop-light.png) | ![Dark theme at 375px wide](../../docs/screenshots/mobile-dark.png) |
 
 ## The Pane language
 
@@ -87,18 +91,19 @@ makes no network requests after loading. Share links carry the program in the
 part of the URL after `#`, which browsers don't send to servers. Your code runs in a small virtual
 machine written in TypeScript (never `eval`) and your latest draft is kept only
 in your own browser's local storage. A strict Content Security Policy blocks
-inline scripts and third-party hosts. See [SECURITY.md](SECURITY.md) to report
+inline scripts and third-party hosts. See [SECURITY.md](../../SECURITY.md) to report
 a problem.
 
 ## Running it yourself
 
-You need Node 24 (see `.nvmrc`).
+You need Node 24 (see `.nvmrc`). From the repository root:
 
 ```sh
 npm ci --ignore-scripts
-npm run dev          # http://localhost:5173/glass-compiler/
-npm run verify       # typecheck, lint, unit tests, production build
-npm run test:e2e     # Playwright + axe accessibility checks
+npm run dev                          # http://localhost:5173/glass-compiler/
+npm run verify -w @glass/compiler    # typecheck, unit tests, production build
+npm run test:e2e -w @glass/compiler  # Playwright + axe accessibility checks
+npm run verify                       # the whole series, plus lint
 ```
 
 How it works, and why it was built this way, is written up in
@@ -107,17 +112,17 @@ How it works, and why it was built this way, is written up in
 
 ## Licence
 
-MIT, copyright (c) 2026 Vincent Wesley. See [LICENSE](LICENSE).
+MIT, copyright (c) 2026 Vin's Atelier (Vincent Wesley). See [LICENSE](LICENSE).
 
 This project is **provided as is, no warranty**: use it at your own risk.
 
 The fonts (Space Grotesk, Inter, Silkscreen and JetBrains Mono) are bundled from
 [Fontsource](https://fontsource.org/) under the SIL Open Font License 1.1; their
-licence texts are in [public/licenses/FONTS-OFL.txt](public/licenses/FONTS-OFL.txt).
+licence texts are in [FONTS-OFL.txt](../glass-ui/public/licenses/FONTS-OFL.txt).
 
 ## Credits
 
-Designed and built by Vin, Vin's Atelier (https://vwesley.dev). Logo by @portus_workstation / @wason25_pz (Instagram); the logo is all rights reserved (see NOTICE.md), not covered by the MIT licence.
+Designed and built by Vin, Vin's Atelier (https://vwesley.dev). Logo by @portus_workstation / @wason25_pz (Instagram); the logo and the credits-card art are all rights reserved (see [NOTICE.md](../../NOTICE.md)), not covered by the MIT licence.
 
 ---
 

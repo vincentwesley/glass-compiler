@@ -10,15 +10,37 @@ export const SHARED_PUBLIC_DIR = here('../public');
 /** Marker comments a page's index.html can use, and the partial each one becomes. */
 export const PARTIALS: Readonly<Record<string, string>> = {
   signoff: here('../brand/signoff.html'),
+  credits: here('../brand/credits.html'),
+  mark: here('../brand/mark.html'),
 };
 
-const MARKER = /<!--\s*glass:([a-z-]+)\s*-->/g;
+const MARKER = /<!--\s*glass:([a-z-]+)((?:\s+[a-z-]+="[^"]*")*)\s*-->/g;
+const ATTR = /([a-z-]+)="([^"]*)"/g;
+const LEADING_NOTE = /^\s*<!--(?!\s*glass:)[\s\S]*?-->\s*/;
+const VAR = /\{\{([A-Z_]+)\}\}/g;
 
-/** Replace every `<!-- glass:name -->` marker with its partial. Unknown markers are an error, not a silent gap. */
-export function injectPartials(html: string, read: (name: string) => string): string {
-  return html.replace(MARKER, (_, name: string) => {
+const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+
+/**
+ * Replace every `<!-- glass:name key="value" -->` marker with its partial.
+ * Attributes fill `{{KEY}}` placeholders (HTML-escaped); partials may contain
+ * further markers. Unknown markers and unfilled placeholders are errors, not
+ * silent gaps.
+ */
+export function injectPartials(html: string, read: (name: string) => string, depth = 0): string {
+  if (depth > 4) throw new Error('Glass partials nest too deeply');
+  return html.replace(MARKER, (_, name: string, attrs: string) => {
     if (!(name in PARTIALS)) throw new Error(`Unknown Glass partial <!-- glass:${name} -->`);
-    return read(name).trim();
+    const vars = new Map<string, string>();
+    for (const [, key, value] of attrs.matchAll(ATTR)) vars.set(key!.toUpperCase().replace(/-/g, '_'), value!);
+    const body = read(name)
+      .replace(LEADING_NOTE, '')
+      .replace(VAR, (_m, key: string) => {
+        const value = vars.get(key);
+        if (value === undefined) throw new Error(`<!-- glass:${name} --> needs ${key.toLowerCase()}="..."`);
+        return escapeHtml(value);
+      });
+    return injectPartials(body, read, depth + 1).trim();
   });
 }
 

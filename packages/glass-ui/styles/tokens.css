@@ -108,3 +108,22 @@
   --c-operator: #0a6e47;
   --c-punct: #384d40;
 }
+
+/* House-kit names used by the vendored credits card (styles/credits.css),
+   mapped onto this project's tokens so the card follows both themes. */
+:root {
+  --fg: var(--ink);
+  --fg-muted: var(--ink-dim);
+  --bg-elev: var(--surface);
+  --border: var(--line-strong);
+  --border-soft: var(--line);
+  --border-strong: var(--line-strong);
+  --font-label: var(--font-pixel);
+  --firefly: #9dff6a;
+  --firefly-core: #eaffb0;
+}
+
+:root[data-theme='light'] {
+  --firefly: #1a7f46;
+  --firefly-core: #1f8a4f;
+}

@@ -307,6 +307,10 @@
   font-size: 13px;
 }
 
+.credits .creator {
+  margin-top: 16px;
+}
+
 .noscript {
   max-width: 640px;
   margin: 16px auto;

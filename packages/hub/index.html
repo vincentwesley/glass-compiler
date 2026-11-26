@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; manifest-src 'self'; worker-src 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="author" content="Vin, Vin's Atelier" />
+    <link rel="author" href="/humans.txt" />
+    <meta name="theme-color" content="#11150e" />
+    <title>Glass: computers you can see through</title>
+    <meta name="description" content="The Glass series by Vin's Atelier: small machines you can watch working. A compiler, a WebAssembly VM, a C compiler, a game console and a kernel, every stage on show." />
+    <link rel="canonical" href="https://vincentwesley.github.io/glass-compiler/series/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Glass: computers you can see through" />
+    <meta property="og:description" content="The Glass series by Vin's Atelier: small machines you can watch working. A compiler, a WebAssembly VM, a C compiler, a game console and a kernel, every stage on show." />
+    <meta property="og:url" content="https://vincentwesley.github.io/glass-compiler/series/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script src="/theme-init.js"></script>
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body class="hub-page">
+    <a class="skip-link" href="#main">Skip to the series</a>
+    <header class="masthead">
+      <div class="brand">
+        <!-- glass:mark -->
+        <div>
+          <h1 class="title">Glass</h1>
+          <p class="tagline">Computers you can see through.</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="theme-toggle" type="button" class="btn" aria-pressed="false">
+          <span class="theme-icon" aria-hidden="true"></span><span class="theme-text">Light theme</span>
+        </button>
+      </div>
+    </header>
+
+    <main id="main" class="hub" tabindex="-1">
+      <section class="hub-intro" aria-labelledby="h-intro">
+        <p class="pixel-label">A series by Vin's Atelier</p>
+        <h2 id="h-intro" class="hub-lead">Small machines, built from scratch, with the glass left off.</h2>
+        <p>
+          Each Glass project is a real piece of computing: a compiler, a virtual machine, a console, a kernel.
+          You can watch it work and click any part to see where it came from and where it goes next. They're graded
+          by real test suites, and the scores are shown on each page.
+        </p>
+      </section>
+
+      <section class="hub-section" aria-labelledby="h-pipeline">
+        <h2 id="h-pipeline"><span class="pixel-label">01</span> The pipeline</h2>
+        <p class="hub-sub">
+          The projects connect. A Pane program compiles to WebAssembly, runs in the Glass Wasm debugger and, later,
+          boots on Glass Kernel. Small C joins the same road from C.
+        </p>
+        <!-- hub:pipeline -->
+      </section>
+
+      <section class="hub-section" aria-labelledby="h-members">
+        <h2 id="h-members"><span class="pixel-label">02</span> The series</h2>
+        <p class="hub-sub">Live projects open straight into a working demo. Planned ones are drawn dashed until they exist.</p>
+        <!-- hub:members -->
+      </section>
+
+      <section class="hub-section hub-how" aria-labelledby="h-how">
+        <h2 id="h-how"><span class="pixel-label">03</span> How it's made</h2>
+        <ul class="how-list">
+          <li><strong>Open source, one repo.</strong> Every project is its own package with its own tests, sharing one debugger kit.</li>
+          <li><strong>Graded, not claimed.</strong> Scores come from official test suites and are recorded by a script, never typed in.</li>
+          <li><strong>Private by design.</strong> Static pages, no accounts, no tracking, no requests to other sites. Your code stays in your browser.</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="credits">
+      <p>
+        <span class="pixel-label">The Glass series</span> · made by Vin, Vin's Atelier · MIT licence ·
+        <a href="https://github.com/vincentwesley/glass-compiler">source on GitHub</a> · fonts under the
+        <a href="licenses/FONTS-OFL.txt">SIL Open Font License</a>
+      </p>
+      <!-- glass:credits project="The Glass series" -->
+    </footer>
+  </body>
+</html>

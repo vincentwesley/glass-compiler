@@ -1,0 +1,12 @@
+{
+  "member": "compiler",
+  "suites": [
+    {
+      "name": "Unit tests: lexer, parser, compiler, VM and UI logic",
+      "passed": 167,
+      "failed": 0,
+      "skipped": 0,
+      "total": 167
+    }
+  ]
+}

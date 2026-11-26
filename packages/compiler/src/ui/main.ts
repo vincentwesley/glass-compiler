@@ -5,8 +5,10 @@ import '@glass/ui/styles/components.css';
 import '@glass/ui/styles/panel.css';
 import '../styles/panels.css';
 import '@glass/ui/styles/debugger.css';
+import '@glass/ui/styles/credits.css';
 import '@glass/ui/brand/logo.css';
 import '@glass/ui/brand/logo-resize';
+import '@glass/ui/credits';
 
 import { build, lineCol } from '../lang';
 import { EXAMPLES } from '../examples';

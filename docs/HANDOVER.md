@@ -1,68 +1,90 @@
 # Handover
 
-## Status
+Current state of the Glass series. The plan is in [PLAN.md](PLAN.md), the reasons
+in [DECISIONS.md](DECISIONS.md), the scripted checks in
+[ACCEPTANCE.md](ACCEPTANCE.md), and the owner's to-do list in
+[NEEDS-VIN.md](NEEDS-VIN.md). Glass Compiler's own history (its M0–M4 and the
+robustness pass) is in `packages/compiler/docs/`.
 
-- **M0 research and scaffolding: done.** Research, decisions, plan, configs,
-  licence, security policy, CI and deploy workflows.
-- **M1 language core: done.** Lexer, Pratt parser, compiler, tracing VM in
-  `src/lang/` with unit tests in `tests/unit/`.
-- **M2 UI shell and stages: done.** Editor (CodeMirror 6 in a shadow root for
-  CSP), Tokens, Tree (SVG), Bytecode and VM panels, both themes, 375px to desktop.
-- **M3 linking, examples, tour: done.** Selection store, lineage strip,
-  follow-selection, five examples, guided tour, credits footer.
-- **M4 verify and ship: done.** Playwright + axe e2e suite passes at 1440px and
-  375px in both themes with no CSP violations; README screenshots in
-  `docs/screenshots/` (regenerate with `SCREENSHOTS=1 npm run test:e2e -- screenshots`).
-  Pull request opened from `claude/friendly-thompson-jh0adm` to `main`.
+## Milestones
 
-- **Follow-up (after the MVP PR): done.** Jump-target markers in the bytecode
-  panel and share links that carry the program in the URL fragment
-  (`src/ui/share.ts`), with unit and e2e tests.
+| # | Milestone | State |
+| --- | --- | --- |
+| M1 | Restructure into a series monorepo, glass-ui, hub | **Done** (2026-11-26) |
+| M2 | Glass Wasm interpreter, first spec-test grade | Next |
+| M3–M8 | Pane → Wasm, Small C, Glass Console, Glass Kernel, Language Tools, JIT | Planned |
 
-- **Robustness pass: done.** A code review of the whole branch found a parser
-  stack overflow on absurdly nested input (which a share link could make
-  permanent through the saved draft), a depth-counter leak, a dead stray-`}`
-  handler, stale cursor lookups mid-edit, and quadratic bytecode rendering.
-  All fixed with tests. Also: share links back up your own code ("Restore my
-  previous code") and work when pasted into an open tab; the examples menu
-  switches to "Your code" after edits; repeated errors are grouped (×N).
+## M1: what changed
 
-## GitHub Actions minutes
+- **Workspaces.** npm workspaces: `packages/glass-ui`, `packages/compiler` and
+  `packages/hub`. Glass Compiler moved with its git history.
+- **glass-ui extracted from Glass Compiler.** It holds:
+  - dom helpers, the theme toggle, a typed `Store` and the selection `Highlighter`;
+  - the `Stepper` (step controls, timeline, play timer) and the tour engine;
+  - the house styles and the draggable sign-off;
+  - the credits card and the `glass-pages` Vite plugin for shared static chrome.
+- **The restructure is pixel-identical.** Compiler screenshots before and after
+  matched pixel for pixel at 1440px and 375px in dark and light, and its e2e +
+  axe suite passed unchanged.
+- **Deliberate changes to Glass Compiler after that:**
+  - The house **credits card** at the bottom of the page.
+  - A "part of the Glass series" link in the footer.
+- **Hub** at `/glass-compiler/series/`:
+  - The pipeline.
+  - Six member cards. Planned members are dashed tiles with no link.
+  - A Glass Compiler page showing its recorded grade.
+  - It is static HTML rendered from `site.config.mjs` at build time.
+- **Site assembly** (`scripts/assemble-site.mjs`) puts each package's `dist/`
+  where it is served. `scripts/check-site.mjs` checks CSP, credits, links and
+  same-origin on every page.
+- **CI:** one workflow per package with path filters (`ci-compiler.yml`,
+  `ci-glass-ui.yml`, `ci-hub.yml`). `deploy.yml` now uploads `_site/glass-compiler`.
+- **Docs:**
+  - Series research, plan, decisions, acceptance and owner to-do list.
+  - `THIRD_PARTY_NOTICES.md`.
+  - A new series README at the root; the compiler's README moved to
+    `packages/compiler/`.
+  - LICENSE now reads "Copyright (c) 2026 Vin's Atelier (Vincent Wesley)".
 
-The account was reported to have no Actions minutes left this month
-(2026-10-18), yet CI still ran on this public repo's PR pushes. Either way,
-verify locally before every push: `npm run verify` and `npm run test:e2e`. If
-the Pages deploy doesn't start after merging, run **Deploy to GitHub Pages**
-from the Actions tab (`workflow_dispatch`).
+## Verification for M1 (local, 2026-11-26)
 
-## One-time step for the repo owner
-
-In GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-After that, merging to `main` deploys to
-https://vincentwesley.github.io/glass-compiler/ (the deploy workflow can also
-be run by hand from the Actions tab).
-
-## What could come next
-
-- Run the Playwright/axe suite in CI too (needs `npx playwright install
-  chromium` in the workflow; deliberately left out of the requested CI).
-- `for` loops and arrays in Pane, if they can be shown without clutter.
+- `npm run verify` passes: typecheck, lint, 11 + 167 + 8 unit tests, build.
+- `npm run check:site` passes (3 pages), and `npm run check:results` passes.
+- Glass Compiler e2e: 72 pass, 4 skipped (the screenshot generator).
+- Hub e2e: 20 pass, covering axe, both themes, both widths, no-JS and navigation.
+- `visual-check` skill on all three pages at 375, 768 and 1280, dark and light:
+  see the qa report in the PR description.
 
 ## Known issues
-- 2026-11-16: milestone visual check clean (e2e 70 pass / 4 skip; 2 load timeouts pass alone; axe 0). `qa-output/` now gitignored. The Pages deploy workflow fails because Pages is not enabled for the repo.
 
-- `playwright-core` is overridden to follow `@playwright/test`
-  (`"$@playwright/test"`), so Dependabot bumps keep the two in step. (The
-  2026-11-17 bump to 1.65.1 had left the override at 1.56.1, which stopped the
-  e2e suite from starting.) When the sandbox's Chromium build doesn't match,
-  set `PW_CHROMIUM_PATH` (see CLAUDE.md); 2026-11-20: 72 pass / 4 skip against
-  build 1243.
-- The site is live at https://vincentwesley.github.io/glass-compiler/ (checked
-  2026-11-20 at 1440px and 375px: no console errors, fonts load).
-- Very wide trees (long programs) still need horizontal scrolling at 60% zoom.
-- CSP `frame-ancestors` can't be set from a meta tag, so the page could be
-  framed by another site; GitHub Pages doesn't allow custom headers.
+- `npm audit` reports moderate advisories in the typescript-eslint dev chain
+  (dev only, not shipped); Dependabot tracks it.
+- Very wide syntax trees (long programs) still need horizontal scrolling.
+- CSP `frame-ancestors` can't be set from a meta tag, and GitHub Pages can't send
+  headers, so pages could be framed by another site.
+- The vendored `visual-check` script launches Playwright's expected Chromium
+  build. In this sandbox, run it with `PLAYWRIGHT_BROWSERS_PATH` pointing at a
+  folder that symlinks `chromium_headless_shell-<expected>` to the installed
+  build (see next-session.md).
 
-- Brand: draggable Vin's Atelier logo + sign-off in the footer (`src/brand/`, `tests/e2e/logo.spec.ts`); pre-paint form in `public/theme-init.js`.
-- 2026-11-17 hygiene sweep: dependabot added.
-- 2026-11-18: kit sync: project owns its token system (--surface/--ink, glass-theme key); only canonical scales/z/dur tokens added additively; components.css and theme-init intentionally not re-copied; zero pixel diff.
+## Done and verified
+
+- Glass Compiler live at https://vincentwesley.github.io/glass-compiler/, with all
+  old links and `#code=` share links unchanged.
+- Series monorepo with glass-ui, the hub, per-package CI and the deploy of the
+  assembled site.
+- Research, plan, decisions, acceptance checks, notices and owner steps written.
+
+## Not done, and why
+
+- Glass Wasm and every later member: not started yet. M2 is next, in order.
+- The "follow this program" view across members needs the Pane → Wasm backend
+  (M3) first.
+- e2e tests run locally, not in CI. That's a deliberate saving of Actions
+  minutes (house rule); CI runs typecheck, lint, unit tests, builds and the site
+  check.
+
+## What needs Vin
+
+- Nothing is required. If `main` has branch protection, update the required
+  check names (NEEDS-VIN.md, Recommended 1).

@@ -26,7 +26,11 @@
     "lint": "eslint .",
     "test": "npm run test --workspaces --if-present",
     "test:e2e": "npm run test:e2e --workspaces --if-present",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run build"
+    "verify": "npm run typecheck && npm run lint && npm test && npm run build",
+    "check:site": "node scripts/check-site.mjs",
+    "check:results": "node scripts/record-results.mjs compiler --check",
+    "serve": "node scripts/serve-site.mjs",
+    "acceptance": "npm run verify && npm run check:site && npm run check:results && npm run test:e2e"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

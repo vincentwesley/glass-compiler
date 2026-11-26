@@ -1,5 +1,5 @@
 import { defineConfig } from 'vitest/config';
-import { glassPages } from '../glass-ui/vite/glass-pages';
+import { glassPages } from '../glass-ui/vite/glass-pages.ts';
 
 export default defineConfig({
   // Served from https://vincentwesley.github.io/glass-compiler/ (the series root; see docs/DECISIONS.md S2)
