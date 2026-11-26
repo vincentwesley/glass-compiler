@@ -24,7 +24,7 @@ packages/
     assets/  creator.webp (owner's art, all rights reserved)
   compiler/             @glass/compiler: Glass Compiler (unchanged behaviour)
   hub/                  @glass/hub: /glass-compiler/series/
-  wasm/                 @glass/wasm: crate/ (Rust) + web/ (debugger page)   [M2]
+  wasm/                 @glass/wasm: crate/ (Rust VM), spec/ (testsuite submodule), src/ (debugger page)
   small-c/  console/  kernel/  tools/                                       [later]
 docs/                   series docs (this file, research, decisions, handover…)
 docs/screenshots/       README screenshots (kept in place: linked from outside)
@@ -42,7 +42,7 @@ there. The compiler's e2e suite is the regression test.
 | `Highlighter` | mint `is-selected`, lavender `is-related`, peach `is-exec` across panels | compiler, wasm, small-c |
 | `Stepper` | ⏮ ◀ ▶ Play ⏭, speed, timeline scrubber with tick marks for "when did the selection run" | compiler, wasm, console, kernel |
 | `stack view` | value-stack slots with index, value and label | compiler, wasm |
-| `memory view` | hex + ASCII rows, highlighted reads/writes | wasm, kernel, console [M2] |
+| `memory view` | hex + ASCII rows, highlighted reads/writes | wasm (in `packages/wasm/src/ui/memory-panel.ts` until its second user, kernel or console) |
 | `register view` | named registers with changed-this-step flags | console, kernel [M5] |
 | `tour` | guided tour engine (steps supplied by the member) | all apps |
 | `theme` | dark default, light toggle, `glass-theme` key | all |
@@ -93,9 +93,9 @@ Each milestone gets its own PR, merged when its checks pass.
 
 | # | Milestone | Exit criteria |
 | --- | --- | --- |
-| M1 | **Restructure, glass-ui, hub** | Compiler at `/glass-compiler/` behaves exactly as before: same e2e suite green, same CSP, share links work. glass-ui extracted with unit tests. Hub live at `/series/` with a compiler page. Credits card on every page. Docs, ACCEPTANCE and NEEDS-VIN written. |
-| M2 | **Glass Wasm interpreter, first grade** | Rust decoder, validator, interpreter and `.wast` runner. Testsuite submodule at `wg-1.0`. `i32`, `i64`, control flow (`block`, `loop`, `if`, `br`, `br_if`, `br_table`, `call`, `return`), locals and globals `.wast` files passing. Pass count per file on the page. Debugger: value stack, locals, frames, memory. |
-| M2b | Glass Wasm 1.0 complete | Every `wg-1.0` `.wast` file graded (floats, memory, tables, imports, traps, `assert_invalid`, `assert_malformed`). Skips listed with reasons. |
+| M1 ✓ | **Restructure, glass-ui, hub** (done 2026-11-26) | Compiler at `/glass-compiler/` behaves exactly as before: same e2e suite green, same CSP, share links work. glass-ui extracted with unit tests. Hub live at `/series/` with a compiler page. Credits card on every page. Docs, ACCEPTANCE and NEEDS-VIN written. |
+| M2 ✓ | **Glass Wasm interpreter, first grade** (done 2026-11-26, together with M2b) | Rust decoder, validator, interpreter and `.wast` runner. Testsuite submodule at `wg-1.0`. `i32`, `i64`, control flow (`block`, `loop`, `if`, `br`, `br_if`, `br_table`, `call`, `return`), locals and globals `.wast` files passing. Pass count per file on the page. Debugger: value stack, locals, frames, memory. |
+| M2b ✓ | Glass Wasm 1.0 complete (19,270 / 19,270) | Every `wg-1.0` `.wast` file graded (floats, memory, tables, imports, traps, `assert_invalid`, `assert_malformed`). Skips listed with reasons. |
 | M3 | **Pane → Wasm backend** | Fifth stage panel. Every example compiles to Wasm and runs identically in Glass Wasm and Node's WebAssembly (known-answer tests). "Open in Glass Wasm" link. |
 | M4 | **Small C** | chibicc-scoped C subset → Wasm. c-testsuite submodule pinned. Pass count and skip list with reasons on its page. Runs in Glass Wasm. |
 | M5 | **Glass Console** | CHIP-8 mode first (test ROMs graded), then Game Boy (CPU, PPU, timers, APU). Blargg and Mooneye pass list on the page. Debugger: registers, memory, tiles, sprites, click-a-pixel, explain-this-frame, four audio channels (muteable, opt-in sound). Only freely licensed homebrew bundled. |

@@ -3,7 +3,7 @@ import { MEMBERS, SITE } from '../../../../site.config.mjs';
 import { esc, gradeLine, gradeTable, memberCard, membersList, pipeline, type Results } from '../../build/render';
 
 const compiler = MEMBERS.find((m) => m.slug === 'compiler')!;
-const wasm = MEMBERS.find((m) => m.slug === 'wasm')!;
+const smallC = MEMBERS.find((m) => m.slug === 'small-c')!;
 const results: Results = { member: 'compiler', suites: [{ name: 'Unit', passed: 167, failed: 0, skipped: 0, total: 167 }] };
 
 describe('site config', () => {
@@ -29,9 +29,9 @@ describe('hub rendering', () => {
   });
 
   it('renders a planned member as a dashed tile with no link at all', () => {
-    const html = memberCard(wasm, 1, null);
+    const html = memberCard(smallC, 2, null);
     expect(html).toContain('member-tile');
-    expect(html).toContain('Planned · M2');
+    expect(html).toContain('Planned · M4');
     expect(html).not.toContain('<a ');
   });
 

@@ -35,7 +35,7 @@ export const MEMBERS = [
   {
     slug: 'wasm',
     name: 'Glass Wasm',
-    status: 'planned',
+    status: 'live',
     path: 'wasm/',
     pkg: 'packages/wasm',
     milestone: 'M2',

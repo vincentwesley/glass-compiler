@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { extname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Plugin } from 'vite';
 
@@ -44,16 +45,63 @@ export function injectPartials(html: string, read: (name: string) => string, dep
   });
 }
 
+function filesUnder(dir: string): string[] {
+  return readdirSync(dir).flatMap((f) => {
+    const p = join(dir, f);
+    return statSync(p).isDirectory() ? filesUnder(p) : [p];
+  });
+}
+
+export interface GlassPagesOptions {
+  /** A folder of the member's own public files, served beside the shared ones. */
+  extraPublic?: string;
+}
+
 /**
  * The Glass pages plugin: every Glass page serves the shared public files and
  * gets its shared chrome (sign-off, credits) as static HTML at build time, so it
  * works without JavaScript and needs no inline script or style.
  */
-export function glassPages(): Plugin {
+export function glassPages(options: GlassPagesOptions = {}): Plugin {
+  const extra = options.extraPublic;
   return {
     name: 'glass-pages',
     config(config) {
       return config.publicDir === undefined ? { publicDir: SHARED_PUBLIC_DIR } : {};
+    },
+    generateBundle() {
+      if (!extra) return;
+      for (const file of filesUnder(extra)) {
+        this.emitFile({ type: 'asset', fileName: relative(extra, file).split('\\').join('/'), source: readFileSync(file) });
+      }
+    },
+    configureServer(server) {
+      if (!extra) return;
+      const root = resolve(extra);
+      const types: Record<string, string> = { '.txt': 'text/plain; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.png': 'image/png' };
+      server.middlewares.use((req, res, next) => {
+        const base = server.config.base;
+        let path: string;
+        try {
+          path = decodeURIComponent((req.url ?? '').split('?')[0]!);
+        } catch {
+          return next();
+        }
+        if (!path.startsWith(base)) return next();
+        // Resolve inside the folder only: no `..` escapes.
+        const file = resolve(root, '.' + sep + path.slice(base.length));
+        if (file !== root && !file.startsWith(root + sep)) return next();
+        try {
+          if (statSync(file).isFile()) {
+            res.setHeader('Content-Type', types[extname(file)] ?? 'application/octet-stream');
+            res.end(readFileSync(file));
+            return;
+          }
+        } catch {
+          // not one of ours
+        }
+        next();
+      });
     },
     transformIndexHtml: {
       order: 'pre',

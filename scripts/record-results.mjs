@@ -3,6 +3,7 @@
 // hub shows. Never edit results.json by hand: run this instead.
 //   node scripts/record-results.mjs compiler          write results.json
 //   node scripts/record-results.mjs compiler --check  fail if results.json is stale
+//   node scripts/record-results.mjs wasm              the WebAssembly spec testsuite pass counts
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -29,8 +30,26 @@ function vitestSuite(name) {
   }
 }
 
+/** Runs the WebAssembly spec testsuite through the Glass Wasm CLI. */
+function wasmSpec() {
+  const out = execFileSync('cargo', ['run', '--quiet', '--release', '-p', 'glass-wasm', '--', 'spec', join(pkg, 'spec/test/core'), '--json'], {
+    cwd: root,
+    stdio: ['ignore', 'pipe', 'inherit'],
+    maxBuffer: 64 * 1024 * 1024,
+  }).toString();
+  const r = JSON.parse(out);
+  const spec = execFileSync('git', ['-C', join(pkg, 'spec'), 'rev-parse', '--short', 'HEAD']).toString().trim();
+  return {
+    member: 'wasm',
+    testsuite: `WebAssembly/spec tag wg-1.0 (${spec}), test/core`,
+    suites: [{ name: `Spec testsuite commands, ${r.files.length} .wast files (WebAssembly 1.0)`, passed: r.passed, failed: r.total - r.passed, skipped: 0, total: r.total }],
+    files: r.files,
+  };
+}
+
 const RECORDERS = {
   compiler: () => ({ member: 'compiler', suites: [vitestSuite('Unit tests: lexer, parser, compiler, VM and UI logic')] }),
+  wasm: wasmSpec,
 };
 
 const record = RECORDERS[member];

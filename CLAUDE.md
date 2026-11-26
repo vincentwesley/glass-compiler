@@ -31,6 +31,12 @@ Anything that needs the owner goes in `docs/NEEDS-VIN.md`.
 - `npm run acceptance`: everything in docs/ACCEPTANCE.md.
 - `node scripts/record-results.mjs <member>`: re-record the results the hub
   shows. Never edit `results.json` by hand.
+- Rust (Glass Wasm): `git submodule update --init --depth 1` once for the
+  testsuite, then `cargo test -p glass-wasm`, `npm run spec -w @glass/wasm`,
+  `cargo fmt --check -p glass-wasm` and
+  `cargo clippy -p glass-wasm --all-targets -- -D warnings`. The toolchain is
+  pinned in `rust-toolchain.toml`. The page loads the VM built for
+  `wasm32-unknown-unknown` (`npm run build:wasm -w @glass/wasm`).
 
 ## Layout
 
@@ -40,6 +46,8 @@ Anything that needs the owner goes in `docs/NEEDS-VIN.md`.
   theme, styles, brand, credits, the `glass-pages` Vite plugin and shared
   `public/`).
 - `packages/compiler/`: Glass Compiler. `src/lang/` has no DOM imports.
+- `packages/wasm/`: Glass Wasm. `crate/` is the Rust VM (no dependencies),
+  `spec/` the testsuite submodule, and `src/` the debugger page.
 - `packages/hub/`: the series site, rendered from data at build time.
 - `scripts/`: site assembly, site checks, the static server and the results
   recorder.

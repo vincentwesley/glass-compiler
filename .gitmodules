@@ -1,0 +1,4 @@
+[submodule "packages/wasm/spec"]
+	path = packages/wasm/spec
+	url = https://github.com/WebAssembly/spec
+	shallow = true

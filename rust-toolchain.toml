@@ -1,0 +1,5 @@
+# Pinned so local builds and CI produce the same VM (rustup installs it on first use).
+[toolchain]
+channel = "1.97.0"
+targets = ["wasm32-unknown-unknown"]
+components = ["clippy", "rustfmt"]
