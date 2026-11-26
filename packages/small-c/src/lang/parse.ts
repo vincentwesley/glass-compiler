@@ -1241,7 +1241,7 @@ export function parse(tokens: Token[], file: SourceFile, globalsAcross?: Map<str
     const stmts: Node[] = [];
     let first = true;
     while (!take(';')) {
-      if (!first) expect(',', 'between declarations');
+      if (!first && !take(',')) throw errorAt(peek(), `expected ";" after the declaration, found ${describe(peek())}`);
       first = false;
       const { ty, name } = declarator(base);
       if (!name) throw errorAt(peek(), 'expected a variable name');

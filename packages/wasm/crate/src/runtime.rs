@@ -111,8 +111,12 @@ pub struct Store {
     pub tables: Vec<TableInst>,
     pub memories: Vec<MemInst>,
     pub globals: Vec<GlobalInst>,
-    /// Lines printed by host functions (the spectest `print*` imports).
+    /// Lines printed by host functions (the spectest `print*` imports, `pane.print`, `c.write`).
     pub output: Vec<String>,
+    /// Bytes written after the last newline (`c.write`).
+    pub pending: Vec<u8>,
+    /// Set when a C program calls `exit` (see c_host.rs).
+    pub exit_code: Option<i32>,
 }
 
 /// `pages` of zeroed memory, or None if it doesn't fit in this machine's address space.

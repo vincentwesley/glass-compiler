@@ -452,9 +452,12 @@ export function generate(program: Program): WasmOutput {
 
     const emit = (op: string, ...imm: (number | bigint | string)[]) => {
       const ins: Ins = imm.length ? { op, imm } : { op };
-      if (user && cur && cur.tok.file.user !== false && (cur.tok.origin ?? cur.tok).file.user) {
+      if (user && cur && (cur.tok.origin ?? cur.tok).file.user) {
         ins.node = cur.id;
         ins.offset = offsets[cur.start] ?? 0;
+      } else if (user && !cur) {
+        // Prologue and epilogue: the function's name.
+        ins.offset = offsets[(f.tok.origin ?? f.tok).offset] ?? 0;
       }
       code.push(ins);
     };
@@ -495,7 +498,6 @@ export function generate(program: Program): WasmOutput {
     }
     const rv = ret.kind === 'void' ? '' : addLocal('__result', wasmType(ret));
     const fp = uniq('__fp');
-    const pc = f.needsDispatch ? addLocal('__pc', 'i32') : '';
 
     // ------------------------------------------------------------ helpers
 
@@ -988,6 +990,15 @@ export function generate(program: Program): WasmOutput {
             return call(n, used);
           case 'stmtexpr': {
             const stmts = n.stmts!;
+            if (stmts.some(hasLabel)) {
+              // Labels inside ({ … }): its statements get their own dispatch loop.
+              const last = stmts[stmts.length - 1];
+              const valued = last?.kind === 'exprstmt' && n.ty.kind !== 'void';
+              const inner = valued ? stmts.slice(0, -1) : stmts;
+              code.push(...dispatchRegion(() => inner.forEach(stmtD), n));
+              if (valued) gen(last.lhs!, used);
+              return;
+            }
             stmts.forEach((s, i) => {
               if (i === stmts.length - 1 && s.kind === 'exprstmt' && n.ty.kind !== 'void') {
                 const e = s.lhs!;
@@ -1341,21 +1352,33 @@ export function generate(program: Program): WasmOutput {
 
     // ------------------------------------------------------------ dispatch mode (goto)
 
-    const order: string[] = []; // block names in placement order
-    const blockCode = new Map<string, Ins[]>();
-    const labelBlock = new Map<string, string>();
+    // A region is one dispatch loop: the function body, or a statement expression with labels.
+    interface Region {
+      order: string[]; // block names in placement order
+      blockCode: Map<string, Ins[]>;
+      labels: Map<string, string>;
+      pc: string;
+      loop: string;
+    }
+    let region: Region | undefined;
+    const owner = new Map<string, Region>();
     let blockNo = 0;
-    const newBlock = () => `b${blockNo++}`;
+    const newBlock = () => {
+      const b = `b${blockNo++}`;
+      owner.set(b, region!);
+      return b;
+    };
     const placeBlock = (b: string) => {
-      order.push(b);
+      region!.order.push(b);
       const c: Ins[] = [];
-      blockCode.set(b, c);
+      region!.blockCode.set(b, c);
       code = c;
     };
     const jump = (b: string) => {
+      if (owner.get(b) !== region) throw errorAt(cur!.tok, 'jumping out of a statement expression ({ … }) with goto, break or continue is not supported');
       emit('i32.const', `@${b}`);
-      emit('local.set', `$${pc}`);
-      emit('br', '$dispatch');
+      emit('local.set', `$${region!.pc}`);
+      emit('br', `$${region!.loop}`);
     };
     const ifJump = (b: string) => {
       emit('if');
@@ -1363,10 +1386,51 @@ export function generate(program: Program): WasmOutput {
       emit('end');
     };
     const labelOf = (name: string) => {
-      let b = labelBlock.get(name);
-      if (!b) labelBlock.set(name, (b = newBlock()));
+      let b = region!.labels.get(name);
+      if (!b) region!.labels.set(name, (b = newBlock()));
       return b;
     };
+    /** Compiles statements as numbered blocks under one loop that jumps with br_table; returns the code. */
+    const dispatchRegion = (build: () => void, at: Node): Ins[] => {
+      const saved = region;
+      const savedCode = code;
+      const r: Region = { order: [], blockCode: new Map(), labels: new Map(), pc: addLocal('__pc', 'i32'), loop: label('dispatch') };
+      region = r;
+      placeBlock(newBlock());
+      build();
+      const out: Ins[] = [];
+      code = out;
+      region = saved;
+      const pos = new Map(r.order.map((b, i) => [b, i] as const));
+      for (const [name, b] of r.labels) if (!pos.has(b)) throw errorAt(at.tok, `goto ${name}: the label is inside a statement expression ({ … }), and jumping into one is not supported`);
+      at_(at, () => {
+        // Start at block 0 (a statement expression can run more than once).
+        if (saved) {
+          emit('i32.const', 0);
+          emit('local.set', `$${r.pc}`);
+        }
+        emit('loop', `$${r.loop}`);
+        for (let i = r.order.length - 1; i >= 0; i--) emit('block', `$${r.order[i]}`);
+        emit('local.get', `$${r.pc}`);
+        emit('br_table', ...r.order.map((b) => `$${b}`), `$${r.order[r.order.length - 1]}`);
+      });
+      for (const b of r.order) {
+        at_(at, () => emit('end'));
+        for (const ins of r.blockCode.get(b)!) {
+          if (ins.op === 'i32.const' && typeof ins.imm?.[0] === 'string' && ins.imm[0].startsWith('@')) {
+            const target = pos.get(ins.imm[0].slice(1));
+            if (target === undefined) throw errorAt(at.tok, `internal error: block ${ins.imm[0]} was never placed`);
+            ins.imm = [target];
+          }
+          out.push(ins);
+        }
+      }
+      at_(at, () => emit('end'));
+      code = savedCode;
+      return out;
+    };
+    const at_ = at;
+    const hasLabel = (n: Node | undefined): boolean => !!n && (n.kind === 'label' || [n.lhs, n.rhs, n.cond, n.then, n.els, n.init, n.inc, n.body, ...(n.stmts ?? []), ...(n.args ?? [])].some(hasLabel));
     const caseBlocks = new Map<Node, string>();
 
     const stmtD = (n: Node): void =>
@@ -1472,15 +1536,13 @@ export function generate(program: Program): WasmOutput {
 
     // ------------------------------------------------------------ the function
 
-    if (f.needsDispatch) {
-      placeBlock(newBlock());
-      stmtD(f.body!);
-      code = body;
-    } else {
+    let bodyCode: Ins[];
+    if (f.needsDispatch) bodyCode = dispatchRegion(() => stmtD(f.body!), f.body!);
+    else {
       code = [];
       stmt(f.body!);
+      bodyCode = code;
     }
-    const bodyCode = code;
     code = body;
     cur = undefined;
     // Prologue: make the frame, copy address-taken parameters into it.
@@ -1513,25 +1575,7 @@ export function generate(program: Program): WasmOutput {
       }
     }
     emit('block', '$exit');
-    if (f.needsDispatch) {
-      emit('loop', '$dispatch');
-      for (let i = order.length - 1; i >= 0; i--) emit('block', `$${order[i]}`);
-      emit('local.get', `$${pc}`);
-      emit('br_table', ...order.map((b) => `$${b}`), `$${order[order.length - 1]}`);
-      const pos = new Map(order.map((b, i) => [b, i] as const));
-      for (const b of order) {
-        emit('end');
-        for (const ins of blockCode.get(b)!) {
-          if (ins.op === 'i32.const' && typeof ins.imm?.[0] === 'string' && ins.imm[0].startsWith('@')) {
-            const target = pos.get(ins.imm[0].slice(1));
-            if (target === undefined) throw errorAt(f.tok, `internal error: block ${ins.imm[0]} was never placed`);
-            ins.imm = [target];
-          }
-          body.push(ins);
-        }
-      }
-      emit('end');
-    } else body.push(...bodyCode);
+    body.push(...bodyCode);
     emit('end');
     if (usesFrame) {
       emit('local.get', `$${fp}`);

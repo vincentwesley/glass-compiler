@@ -30,6 +30,12 @@ const TOUR_KEY = 'glass-wasm-tour-done';
 const OWN = 'own';
 const COMPILED = 'compiled';
 
+/** The series' compilers, by the language a module's glass.source names. */
+const COMPILERS: Record<string, { language: string; compiler: string; href: string }> = {
+  pane: { language: 'Pane', compiler: 'Glass Compiler', href: '../' },
+  c: { language: 'C', compiler: 'Small C', href: '../small-c/' },
+};
+
 function loadDraft(): string | null {
   try {
     return window.localStorage.getItem(DRAFT_KEY);
@@ -169,7 +175,7 @@ async function start() {
     byId<HTMLButtonElement>('run').disabled = funcs.length === 0;
   };
 
-  // A binary module being debugged (compiled from Pane), or null when the textarea's text is.
+  // A binary module being debugged (compiled from Pane or C), or null when the textarea's text is.
   let compiled: Uint8Array | null = null;
   const paneView = byId('pane-view');
   const paneSource = byId('pane-source');
@@ -194,18 +200,25 @@ async function start() {
     const src = r.value.source;
     setCompiledMode(true);
     paneSource.textContent = src?.text ?? '(no source in this module)';
-    paneEdit.hidden = src?.language !== 'pane';
-    if (src?.language === 'pane') paneEdit.href = `../#code=${encodeSource(src.text)}`;
+    // Each compiler in the series links back to its own page.
+    const from = src ? COMPILERS[src.language] : undefined;
+    byId('pane-label').textContent = from ? `${from.language} source` : 'Source';
+    paneEdit.hidden = !from;
+    if (from && src) {
+      paneEdit.href = `${from.href}#code=${encodeSource(src.text)}`;
+      paneEdit.textContent = `Edit it in ${from.compiler}`;
+    }
     select.value = COMPILED;
-    blurb.textContent =
-      src?.language === 'pane'
-        ? 'Compiled from Pane by Glass Compiler. The code panel shows the WebAssembly; select an instruction to see the Pane it came from.'
-        : 'A binary module.';
+    blurb.textContent = from
+      ? `Compiled from ${from.language} by ${from.compiler}. The code panel shows the WebAssembly; select an instruction to see the ${from.language} it came from.`
+      : 'A binary module.';
     errorEl.hidden = true;
     statusEl.textContent = 'Valid · instantiated';
     statusEl.classList.remove('is-bad');
     store.set({ source: src?.text ?? '', info: r.value, loadError: null, selected: null });
-    renderRunBar(r.value, { export: 'main', args: [] });
+    // A C program starts at _start (which calls main, then exit).
+    const entry = r.value.exports.some((e) => e.name === '_start') ? '_start' : 'main';
+    renderRunBar(r.value, { export: entry, args: [] });
     runCall();
   };
 
@@ -240,7 +253,7 @@ async function start() {
   select.replaceChildren(
     ...EXAMPLES.map((e) => h('option', { value: e.id }, e.title)),
     h('option', { value: OWN }, 'Your module'),
-    h('option', { value: COMPILED, disabled: true }, 'From Glass Compiler'),
+    h('option', { value: COMPILED, disabled: true }, 'A compiled program'),
   );
   const describe = (src: string) => {
     const ex = exampleFor(src);

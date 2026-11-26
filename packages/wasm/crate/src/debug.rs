@@ -14,7 +14,15 @@ use crate::spec::Runner;
 use crate::text::parse_module_text;
 
 /// Runs longer than this stop with status "limit", so a runaway loop can't freeze the page.
-pub const MAX_STEPS: u64 = 200_000;
+pub const MAX_STEPS: u64 = 1_000_000;
+
+/// The result of running a whole program (see `Session::run_to_end`).
+pub struct ProgramRun {
+    pub output: String,
+    pub exit: Option<i32>,
+    pub trap: Option<String>,
+    pub steps: u64,
+}
 
 pub struct Session {
     pub module: Module,
@@ -133,6 +141,7 @@ impl Session {
     fn reset(&mut self) -> Result<(), String> {
         self.runner = Runner::new();
         crate::pane_host::install(&mut self.runner, &self.module)?;
+        crate::c_host::install(&mut self.runner, &self.module);
         self.inst = Some(self.runner.instantiate_module(&self.module)?);
         self.thread = Thread::default();
         Ok(())
@@ -289,6 +298,50 @@ impl Session {
         Ok(self.state_json(status, trap, results, total, final_status))
     }
 
+    /// Runs `_start` (or `name`) to the end without recording, up to `max_steps`.
+    /// For grading whole programs: returns the output (lines joined with newlines,
+    /// plus any unfinished line), the exit status if the program called exit, a
+    /// trap message otherwise, and the number of steps.
+    pub fn run_to_end(&mut self, name: &str, max_steps: u64) -> Result<ProgramRun, String> {
+        self.reset()?;
+        self.summary = None;
+        let inst = self.inst.clone().unwrap();
+        let Some(crate::runtime::ExternVal::Func(f)) = inst.exports.get(name).copied() else {
+            return Err(format!("no exported function \"{name}\""));
+        };
+        let store = &mut self.runner.store;
+        let mut trap = self.thread.start(store, f, &[]).err();
+        while trap.is_none() && !self.thread.done() {
+            if self.thread.steps >= max_steps {
+                trap = Some(Trap::new(&format!("stopped after {max_steps} steps")));
+                break;
+            }
+            if let Err(t) = self.thread.step(store) {
+                trap = Some(t);
+            }
+        }
+        let mut output = String::new();
+        for l in &store.output {
+            output.push_str(l);
+            output.push('\n');
+        }
+        output.push_str(&String::from_utf8_lossy(&store.pending));
+        let exit = store.exit_code;
+        if exit.is_some()
+            && trap
+                .as_ref()
+                .is_some_and(|t| t.0 == crate::c_host::EXIT_TRAP)
+        {
+            trap = None;
+        }
+        Ok(ProgramRun {
+            output,
+            exit,
+            trap: trap.map(|t| t.0),
+            steps: self.thread.steps,
+        })
+    }
+
     fn drive(
         &mut self,
         name: &str,
@@ -335,6 +388,9 @@ impl Session {
                 self.trace.push((f.code_index, f.pc as u32));
             }
             if let Err(t) = self.thread.step(store) {
+                if store.exit_code.is_some() && t.0 == crate::c_host::EXIT_TRAP {
+                    return Ok(("exited", None, vec![]));
+                }
                 return Ok(("trap", Some(t), vec![]));
             }
         }
@@ -447,9 +503,16 @@ impl Session {
             Some(f) => format!("{{\"func\":{},\"pc\":{}}}", f.func_index(), f.pc),
             None => "null".into(),
         };
-        let output: Vec<String> = store.output.iter().map(|o| js(o)).collect();
+        let mut output: Vec<String> = store.output.iter().map(|o| js(o)).collect();
+        if !store.pending.is_empty() {
+            output.push(js(&String::from_utf8_lossy(&store.pending)));
+        }
+        let exit = match store.exit_code {
+            Some(c) => c.to_string(),
+            None => "null".into(),
+        };
         format!(
-            "{{\"status\":\"{status}\",\"finalStatus\":\"{final_status}\",\"step\":{},\"total\":{total},\"trap\":{},\"results\":[{}],\"at\":{at},\"stack\":[{}],\"frames\":[{}],\"labels\":[{}],\"globals\":[{}],\"memory\":{memory},\"output\":[{}]}}",
+            "{{\"exit\":{exit},\"status\":\"{status}\",\"finalStatus\":\"{final_status}\",\"step\":{},\"total\":{total},\"trap\":{},\"results\":[{}],\"at\":{at},\"stack\":[{}],\"frames\":[{}],\"labels\":[{}],\"globals\":[{}],\"memory\":{memory},\"output\":[{}]}}",
             t.steps,
             trap.map(|x| js(&x.0)).unwrap_or_else(|| "null".into()),
             results.iter().map(value_json).collect::<Vec<_>>().join(","),

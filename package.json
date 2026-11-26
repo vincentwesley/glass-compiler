@@ -31,7 +31,7 @@
     "test:e2e": "npm run test:e2e --workspaces --if-present",
     "verify": "npm run typecheck && npm run lint && npm test && npm run build",
     "check:site": "node scripts/check-site.mjs",
-    "check:results": "node scripts/record-results.mjs compiler --check && node scripts/record-results.mjs wasm --check",
+    "check:results": "node scripts/record-results.mjs compiler --check && node scripts/record-results.mjs wasm --check && node scripts/record-results.mjs small-c --check",
     "serve": "node scripts/serve-site.mjs",
     "acceptance": "npm run verify && npm run check:site && npm run check:results && npm run test:e2e"
   },

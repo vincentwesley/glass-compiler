@@ -53,8 +53,10 @@ export interface FrameState {
   stackBase: number;
   locals: { name: string; role: 'param' | 'local'; v: WasmValue }[];
 }
-export type RunStatus = 'paused' | 'finished' | 'trap' | 'limit';
+export type RunStatus = 'paused' | 'finished' | 'trap' | 'limit' | 'exited';
 export interface MachineState {
+  /** A C program's exit status, once it has called exit. */
+  exit: number | null;
   status: RunStatus;
   finalStatus: RunStatus;
   step: number;
@@ -83,6 +85,15 @@ interface Exports {
   gw_trace(): number;
   gw_memory(offset: number, len: number): number;
   gw_format_number(x: number): number;
+  gw_run_program(ptr: number, len: number, maxSteps: number): number;
+}
+
+/** A whole program run (a C program's _start): its output and how it ended. */
+export interface ProgramRun {
+  output: string;
+  exit: number | null;
+  trap: string | null;
+  steps: number;
 }
 
 /** The VM itself failed (not the program it was running) and was restarted. */
@@ -179,6 +190,19 @@ export class GlassWasm {
         const code = this.withInput(input, (p, n) => this.x.gw_run(p, n, stopAt ?? -1));
         const text = dec.decode(this.out());
         return code === 0 ? { ok: true as const, value: JSON.parse(text) as MachineState } : { ok: false as const, error: text };
+      });
+    } catch (e) {
+      return { ok: false, error: (e as Error).message };
+    }
+  }
+
+  /** Runs a binary module's _start to the end without recording a trace (for grading programs). */
+  runProgram(bytes: Uint8Array, maxSteps = 1e9): Result<ProgramRun> {
+    try {
+      return this.guard(() => {
+        const code = this.withInput(bytes, (p, n) => this.x.gw_run_program(p, n, maxSteps));
+        const text = dec.decode(this.out());
+        return code === 0 ? { ok: true as const, value: JSON.parse(text) as ProgramRun } : { ok: false as const, error: text };
       });
     } catch (e) {
       return { ok: false, error: (e as Error).message };

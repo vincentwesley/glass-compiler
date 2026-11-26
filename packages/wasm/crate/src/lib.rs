@@ -3,6 +3,7 @@
 //! whose every step can be inspected.
 
 pub mod binary;
+pub mod c_host;
 pub mod debug;
 pub mod disasm;
 pub mod exec;

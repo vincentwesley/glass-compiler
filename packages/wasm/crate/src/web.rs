@@ -197,3 +197,37 @@ pub extern "C" fn gw_memory(offset: u32, len: u32) -> usize {
 pub extern "C" fn gw_format_number(x: f64) -> usize {
     set_out(crate::jsnum::pane_format(x).into_bytes())
 }
+
+/// Loads a binary module and runs `_start` to the end (no trace), up to `max_steps`.
+/// Output: `{"output":"…","exit":n|null,"trap":"…"|null,"steps":n}`, or 1 and an error.
+///
+/// # Safety
+/// `ptr`/`len` must describe bytes written by the page.
+#[no_mangle]
+pub unsafe extern "C" fn gw_run_program(ptr: *const u8, len: usize, max_steps: f64) -> u32 {
+    let bytes = unsafe { input(ptr, len) };
+    let r = Session::load_binary(bytes).and_then(|mut s| s.run_to_end("_start", max_steps as u64));
+    match r {
+        Ok(p) => {
+            set_out(
+                format!(
+                    "{{\"output\":{},\"exit\":{},\"trap\":{},\"steps\":{}}}",
+                    json::string(&p.output),
+                    p.exit
+                        .map(|c| c.to_string())
+                        .unwrap_or_else(|| "null".into()),
+                    p.trap
+                        .map(|t| json::string(&t))
+                        .unwrap_or_else(|| "null".into()),
+                    p.steps
+                )
+                .into_bytes(),
+            );
+            0
+        }
+        Err(e) => {
+            set_out(e.into_bytes());
+            1
+        }
+    }
+}

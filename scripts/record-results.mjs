@@ -4,6 +4,7 @@
 //   node scripts/record-results.mjs compiler          write results.json
 //   node scripts/record-results.mjs compiler --check  fail if results.json is stale
 //   node scripts/record-results.mjs wasm              the WebAssembly spec testsuite pass counts
+//   node scripts/record-results.mjs small-c           c-testsuite on Node and on Glass Wasm (needs the wasm build)
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -47,7 +48,39 @@ function wasmSpec() {
   };
 }
 
+/** Grades Small C with c-testsuite on Node's WebAssembly and on Glass Wasm. */
+function smallC() {
+  const dir = mkdtempSync(join(tmpdir(), 'glass-results-'));
+  const bundle = join(dir, 'run-testsuite.mjs');
+  try {
+    // The runner is TypeScript; bundle it (with the compiler) for Node.
+    execFileSync('npx', ['rolldown', join(pkg, 'scripts/run-testsuite.ts'), '-o', bundle, '--platform', 'node'], { cwd: root, stdio: ['ignore', 'ignore', 'inherit'] });
+    const run = (engine) => JSON.parse(execFileSync('node', [bundle, '--json', `--engine=${engine}`], { cwd: pkg, stdio: ['ignore', 'pipe', 'inherit'], maxBuffer: 64 * 1024 * 1024 }).toString());
+    const node = run('node');
+    const glass = run('glass-wasm');
+    const count = (r, o) => r.results.filter((x) => x.outcome === o).length;
+    const suite = (name, r) => ({ name, passed: r.passed, failed: r.total - r.passed - count(r, 'skip'), skipped: count(r, 'skip'), total: r.total });
+    // Every test that does not pass, with the reason (the page lists them all).
+    const notPassing = node.results.filter((x) => x.outcome !== 'pass').map(({ name, outcome, reason }) => ({ name, outcome, reason }));
+    const differ = node.results.filter((x, i) => x.outcome !== glass.results[i].outcome).map((x) => x.name);
+    return {
+      member: 'small-c',
+      testsuite: `c-testsuite (${node.commit}), tests/single-exec`,
+      suites: [
+        suite(`c-testsuite single-exec, run on Node's WebAssembly`, node),
+        suite('The same programs run on Glass Wasm', glass),
+        vitestSuite('Unit tests: semantics, printf, preprocessor, errors, code shape'),
+      ],
+      notPassing,
+      enginesDisagree: differ,
+    };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 const RECORDERS = {
+  'small-c': smallC,
   compiler: () => ({ member: 'compiler', suites: [vitestSuite('Unit tests: lexer, parser, compiler, VM and UI logic')] }),
   wasm: wasmSpec,
 };
