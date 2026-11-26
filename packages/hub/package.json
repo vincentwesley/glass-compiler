@@ -1,0 +1,21 @@
+{
+  "name": "@glass/hub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The Glass series hub: one page for the series and a page per member.",
+  "license": "MIT",
+  "author": "Vin, Vin's Atelier (https://vwesley.dev)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "verify": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "@glass/ui": "1.0.0"
+  }
+}

@@ -1,0 +1,101 @@
+/* Panels: the card that holds one stage of a Glass debugger, and the shared
+   highlight language. */
+
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px 14px 12px;
+  transition: box-shadow 0.3s var(--ease);
+}
+
+.panel:focus {
+  outline: none;
+}
+
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 8px;
+}
+
+.panel-head h2 {
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+
+.panel-head h2 .pixel-label {
+  margin-right: 4px;
+  vertical-align: 2px;
+}
+
+.panel-meta {
+  color: var(--ink-dim);
+  font-size: 12.5px;
+}
+
+.panel-meta.is-bad {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.panel-tools {
+  margin-left: auto;
+}
+
+.panel-sub {
+  margin: -2px 0 8px;
+  color: var(--ink-dim);
+  font-size: 13px;
+}
+
+.panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.scroll {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.panel-foot {
+  margin-top: 8px;
+  color: var(--ink-dim);
+}
+
+.empty,
+.note {
+  color: var(--ink-dim);
+  font-size: 13px;
+  padding: 6px 2px;
+}
+
+.note {
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--peach);
+  background: var(--peach-soft);
+  color: var(--ink);
+}
+
+/* ---------- shared highlight language ---------- */
+/* mint = selected, lavender = inside the selection, peach = running next */
+
+.is-related {
+  background: var(--lav-soft);
+}
+
+.is-exec {
+  box-shadow: inset 0 -3px 0 var(--peach);
+}
+
+.is-selected {
+  background: var(--accent-soft);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}

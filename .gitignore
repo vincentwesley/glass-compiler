@@ -13,3 +13,5 @@ playwright/.cache/
 .vscode/
 .idea/
 qa-output/
+_site/
+target/

@@ -1,192 +1,164 @@
-# Decisions
+# Decisions: the Glass series
 
-Each decision has the reason it was made. Newest decisions go at the bottom.
+Series-wide decisions, numbered S1, S2 and so on. Glass Compiler's own decisions
+(D1–D21) now live in
+[`packages/compiler/docs/DECISIONS.md`](../packages/compiler/docs/DECISIONS.md).
+Each entry says what we chose, why, and what would change our mind.
 
-## D1. The language is called **Pane**
+## S1. npm workspaces plus a Cargo workspace, no task runner
 
-A pane is a sheet of glass you look *through*, which is the whole point of the
-project. It is short, easy to say and the file extension `.pane` doesn't clash
-with anything common.
+The root `package.json` declares `"workspaces": ["packages/*"]`. Rust crates join one
+root `Cargo.toml` workspace. We use no Turborepo, Nx or pnpm.
 
-## D2. Pane is deliberately small
+- npm is already the house tool. It keeps one committed lockfile and
+  `npm ci --ignore-scripts` keeps working unchanged.
+- With about eight packages and a shallow graph, a task runner's cache saves
+  seconds, but it would add a binary dependency with its own install and update
+  story.
+- Per-package isolation comes from CI path filters (S7) and from each package
+  owning its scripts (`typecheck`, `lint`, `test`, `build`). The root runs them all
+  with `npm run <script> --workspaces --if-present`.
+- **Revisit if** a full local `npm run verify` takes over about two minutes, or the
+  graph gets deep.
 
-Pane has numbers, strings, booleans, `nil`, `let` variables, assignment,
-arithmetic, comparison, `and`/`or`/`not`, `if`/`else`, `while`, blocks with
-lexical scope, `print`, and top-level functions with parameters, `return` and
-recursion. Comments start with `#`.
+## S2. Keep the repo name and the Pages URL; the series lives under it
 
-**Why:** every feature has to be visible in four panels at once. Each one
-added here makes the tree bigger and the bytecode longer. This set is enough
-for FizzBuzz, Fibonacci and loops, which are what people actually try first.
+| Path | What |
+| --- | --- |
+| `/glass-compiler/` | Glass Compiler, exactly where it has always been |
+| `/glass-compiler/series/` | The hub: the series, the pipeline, and a page per member |
+| `/glass-compiler/wasm/` | Glass Wasm (from milestone 2) |
+| `/glass-compiler/small-c/`, `/kernel/`, `/console/`, `/tools/` | Later members, each once it exists |
 
-**Left out on purpose:** closures (they need upvalues, which are hard to draw),
-classes, arrays, `for` loops (sugar over `while`), and nested function
-declarations (rejected with a clear compile error so nobody expects closures).
+- Pages project-site URLs do not redirect after a repo rename (RESEARCH §2).
+  Renaming to `glass` would break every existing link, including the portfolio,
+  DevPulse, the GitHub profile and shared `#code=` links. A meta-refresh workaround
+  loses the fragment.
+- Keeping the compiler at the root path means nothing that works today can break.
+- **What would change it:** a custom domain (for example `glass.vwesley.dev`). Then
+  the hub could move to `/` and the compiler to `/compiler/`. This is optional and
+  written up in `NEEDS-VIN.md`. Nothing in the code hard-codes the
+  `/glass-compiler/` prefix outside `site.config.mjs` (see S5).
 
-## D3. Statements end with `;`
-
-Semicolons make every statement boundary a visible token, avoid the newline
-ambiguities that Lua and JavaScript have, and let the parser recover from an
-error by skipping to the next `;`.
-
-## D4. Hand-written lexer, Pratt parser, explicit AST
-
-A hand-written lexer is short and lets every token carry an exact source span.
-The parser is recursive descent for statements and a **Pratt parser** with
-matklad-style *binding-power pairs* for expressions. The binding-power table is
-exported and shown in the UI.
-
-Unlike clox, we **keep an AST** between parsing and code generation, because
-the tree is one of the things we want to show.
-
-Parentheses produce a `Group` node. It emits no bytecode, which is itself
-something worth seeing: grouping changes the *shape* of the tree, not the
-instructions.
-
-## D5. One shared identity, the node id, links every stage
-
-- every token knows the AST node that "owns" it (the `+` belongs to its
-  `Binary` node, `let`, the name, `=` and `;` belong to the `Let` node, and so on);
-- every instruction records the node id that emitted it;
-- every VM step records which instruction (chunk + address) it executed.
-
-So "click anything, see everything" is one lookup: whatever you click resolves
-to a node id, and each panel highlights what belongs to that node.
-
-## D6. Bytecode design
-
-Stack machine, one chunk per function plus `main`, jump operands are absolute
-addresses (easier to read than relative offsets), `JUMP_IF_FALSE` pops its
-condition, and `and`/`or` use `DUP` so the listing never has a dangling `POP`
-to explain. Top-level `let` creates a global; `let` inside a block or function
-uses a stack slot. Function calls push a frame whose base is the first
-argument's stack slot, as in clox.
-
-## D7. The VM records a full trace, the UI scrubs it
-
-The VM runs the whole program up front and records a snapshot before each
-instruction (stack, frames with named locals, globals, output). The UI then
-moves through that trace, so stepping **backwards** is free and the scrubber
-always knows how long the run is. Limits: 5,000 steps and 64 nested calls, so
-an infinite loop or runaway recursion ends with a friendly message rather than
-freezing the tab.
-
-Runtime errors (adding a number to `true`, dividing by zero, calling something
-that isn't a function, wrong number of arguments, reading an undefined variable)
-stop the run and point at the node that caused them. Division by zero is an
-error rather than `Infinity` because that is easier for beginners to reason about.
-
-Strings can be joined to anything with `+` (`"n = " + 3`), which keeps the
-examples readable without needing a `str()` function.
-
-## D8. No UI framework
-
-Plain TypeScript modules and a tiny DOM helper. The app has five panels and one
-selection store; a framework would add more bundle than it saves code, and plain
-DOM keeps the CSP simple.
-
-## D9. CodeMirror 6 (view + state + commands only)
-
-CodeMirror gives an accessible, mobile-friendly editor with undo/redo and line
-numbers. Syntax highlighting comes from **Pane's own lexer** through a view
-plugin, rather than a separate grammar, so the colours in the editor are exactly
-the token kinds shown in the Tokens panel.
-
-## D10. SVG tree, own layout
-
-The syntax tree is laid out by a small tidy-tree algorithm (each subtree gets
-its own horizontal band; parents are centred over their children) and drawn as
-SVG. This avoids pulling in d3 for one layout function and keeps nodes as real
-focusable elements.
-
-## D11. Content Security Policy in a meta tag
-
-GitHub Pages can't send custom headers, so `index.html` carries:
+## S3. Layout: one folder per member under `packages/`
 
 ```
-default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;
-font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self';
-form-action 'none'; manifest-src 'self'; worker-src 'none'
+packages/
+  glass-ui/     shared debugger kit (TypeScript + CSS, no framework)
+  compiler/     Glass Compiler (Pane → tokens → tree → bytecode → VM)
+  hub/          the series site
+  wasm/         Glass Wasm: crate/ (Rust VM, CLI) + web/ (debugger page)
+  ...           small-c, kernel, console, tools as they arrive
+site.config.mjs every page's base path and status, read by the builds and the hub
+scripts/        site assembly and checks shared by all packages
 ```
 
-No inline scripts, no inline styles and no third-party hosts. The no-flash
-theme loader is an external file (`public/theme-init.js`).
+Each member keeps its own `package.json`, README, LICENSE, tests, docs and page.
+Rust lives inside its member (`packages/wasm/crate`) rather than in a separate
+`crates/` tree, so a member is one folder you can read top to bottom.
 
-CodeMirror injects its base styles with a `<style>` element when mounted in the
-document, which `style-src 'self'` blocks (verified in Chromium). Rather than
-weakening the policy with `'unsafe-inline'`, the editor is mounted inside a
-**shadow root**: there CodeMirror uses constructable stylesheets
-(`adoptedStyleSheets`), which the policy allows. All editor styling therefore
-lives in `EditorView.theme` (in `src/ui/editor.ts`), using the page's CSS
-custom properties, which inherit into the shadow tree. No code sets `style`
-attributes; positions use the CSSOM or SVG attributes. The e2e suite fails if
-the browser logs any CSP violation.
+## S4. glass-ui is framework-free source, consumed directly
 
-## D12. Dark by default, light only by choice
+`@glass/ui` ships TypeScript and CSS. Each app's Vite build bundles it, so there is
+no separate build step and no published artefact. It holds only what at least two
+pages use, extracted from Glass Compiler and kept behaviour-identical:
 
-The dark theme lives on `:root`, so it applies with JavaScript off and with the
-OS set to light. The mint light theme only applies when the toggle sets
-`data-theme="light"` on `<html>`; the choice is stored in `localStorage`.
+- **dom:** `h()`, roving tabindex, `revealInPanel`.
+- **Store:** a typed state container.
+- **Highlighter:** the mint, lavender and peach selection classes.
+- **Stepper:** step back/forward, play, speed, the timeline scrubber with tick marks.
+- **Panels:** stack slots and labelled value lists.
+- **Theme toggle and tour engine.**
+- **Styles:** tokens, base, components, the debugger panel CSS.
+- **Brand:** the draggable logo and the credits card.
 
-## D13. Playwright pinned to 1.56.1
+A new panel type joins glass-ui when its second user arrives: the memory hex view
+and register file come with Glass Wasm. No React, so the kit carries no runtime
+dependency and works under the strict CSP.
 
-That version matches the Chromium build pre-installed in the cloud session, so
-end-to-end tests run without downloading browsers. CI runs typecheck, lint, unit
-tests and build (as requested); browser tests run locally before each push.
+## S5. Shared page chrome is static HTML, injected at build time
 
-## D14. Mobile layout stacks the panels
+`glass-ui/vite` exports a small Vite plugin. It replaces marker comments such as
+`<!-- glass:credits -->` in each page's `index.html` with the shared credits card,
+sign-off and series nav. Every page then has the same footer and credits with no
+JavaScript (they work in `<noscript>`), and there is no inline script or style.
+Base paths and member status come from `site.config.mjs`, so the hub's cards and
+each page's "part of the Glass series" link can't drift apart.
 
-At 375px all stages stay visible in one scrolling column rather than hiding
-behind tabs, so clicking a token still visibly lights up the other stages
-below it. A "jump to stage" bar at the top scrolls to each panel.
+## S6. Every page ends with the house credits card
 
-## D15. Accessible names come from visible text
+The credits card (`vendor/house/credits/`) goes at the bottom of every page,
+Glass Compiler included. Glass Compiler already has the draggable sign-off, so per
+UPGRADING step 6 the card's static logo and "Logo by" block are left out and the
+sign-off sits in the card's brand slot. The card's kit token names (`--fg`,
+`--bg-elev`, `--firefly`, …) are mapped onto the project's tokens in
+`glass-ui/styles/tokens.css`. Nothing is copied twice and nothing is recoloured.
 
-Token chips, bytecode rows and tree nodes take their accessible names from
-their visible text (axe's `label-content-name-mismatch` rule), with extra
-detail in `title` (tokens) or an SVG `<title>` (tree nodes). Each panel is one
-tab stop with arrow-key movement inside (roving tabindex), so keyboard users
-aren't forced through hundreds of tab stops.
+## S7. CI: one workflow per package, one deploy
 
-## D16. Selecting something can move the VM ("Follow selection")
+- `ci-<package>.yml` runs on PRs and pushes to `main`, filtered by `paths:` to
+  the package, `glass-ui` (for its dependents), the root lockfile and its own
+  workflow file. A change to Glass Wasm doesn't run Glass Compiler's checks.
+- `ci-glass-ui.yml` runs glass-ui's own tests.
+- `deploy.yml` builds the whole site, because a Pages artefact is the whole site.
+  It runs only on `main` and when site sources change.
+- Actions stay SHA-pinned with `permissions: contents: read`. No
+  `pull_request_target`. Minutes are limited, so CI confirms rather than tests:
+  everything is verified locally before a push (house rule).
 
-By default, selecting a token, node or instruction jumps the VM to the next
-step that runs it, so the VM panel lights up too. It is a checkbox in the VM
-panel for people who want to keep the machine where it is. Moving the editor
-cursor never moves the VM.
+## S8. Rust to Wasm with cargo alone, and a narrow CSP change
 
-## D17. The tree zooms to fit
+- Crates build with `cargo build --target wasm32-unknown-unknown --release`. They
+  export a small C-style API over linear memory, and a hand-written TypeScript
+  loader (about 100 lines, unit-tested) wraps it. No wasm-pack or wasm-bindgen
+  (RESEARCH §1).
+- Pages that run Wasm add `'wasm-unsafe-eval'` to `script-src`. It allows
+  compiling WebAssembly and nothing else; JavaScript `eval` stays blocked. Pages
+  that don't run Wasm (compiler, hub) keep the exact current policy.
 
-The tree picks the largest zoom (60–100%) that fits the panel, until the user
-zooms by hand, and starts scrolled so the root is in view.
+## S9. Glass Wasm reads the official testsuite itself
 
-## D18. Share links use the URL fragment
+- `packages/wasm/testsuite` is a git submodule of
+  [WebAssembly/testsuite](https://github.com/WebAssembly/testsuite), pinned to tag
+  `wg-1.0` for the 1.0 feature set.
+- The VM includes its own `.wast` parser (RESEARCH §5). The same Rust code runs
+  the suite in `cargo test`, in the CLI and in the browser.
+- The page shows passes per `.wast` file, computed live. A committed
+  `results.json` from the CLI is the fallback and lets the hub show the count
+  without loading the VM.
+- Results are never edited by hand. A test that is skipped is listed with its
+  reason.
 
-A shared program is UTF-8 → base64url in `#code=...`. The fragment is never
-sent to a server, so sharing needs no backend and leaks nothing to GitHub
-Pages logs. On load the program becomes the local draft and the fragment is
-removed from the address bar, so later edits aren't confused with the link.
-If the clipboard API is unavailable, the link is shown in a read-only field to
-copy by hand.
+## S10. Build order
 
-## D19. Jump targets are marked, not drawn
+The order follows the brief, with one refinement: **the Pane-to-Wasm backend comes
+right after the Wasm interpreter reaches its first milestone**, before the
+interpreter is complete. Two reasons:
 
-Instead of arrows (which tangle in a scrolling list on a phone), each row a
-jump lands on shows the addresses that jump there (`◂ 13`), and selecting a
-jump outlines its landing row in lavender.
+1. The backend only needs the integer, control-flow, locals, globals and call
+   subset that milestone 2 grades.
+2. The backend, the interpreter and Node's own WebAssembly give three independent
+   implementations that cross-check each other early.
 
-## D20. Hostile input gets a message, never a crash
+## S11. Names, licences and credit
 
-Share links mean anyone can hand the compiler any text. The parser bounds its
-recursion (200 levels of brackets, blocks or `else if`) and the depth of the
-finished tree (300 levels, which also covers long operator chains such as
-`1 + 1 + …` that nest without recursing), reporting both as normal parser
-errors. `build()` additionally catches anything unexpected and returns a
-diagnostic, so a bad program can never break the page or poison the saved
-draft. Identical diagnostics are grouped in the list (×N) and the list stops
-at 30 entries.
+- npm packages are `@glass/<member>`, all `private: true` (nothing is published
+  to npm).
+- Every package and the root carry the MIT LICENSE: `Copyright (c) 2026 Vin's
+  Atelier (Vincent Wesley)`.
+  - The brief asks for the studio name.
+  - The house rules keep the legal name where it's legally needed, which a
+    copyright line is.
+  - Writing both satisfies both.
+- Every `author` field is `Vin, Vin's Atelier (https://vwesley.dev)`, and Cargo
+  `authors` uses the same string.
+- Every third-party item (npm dependency families, fonts, testsuites, ROMs) is
+  listed in the root `THIRD_PARTY_NOTICES.md`.
 
-## D21. Share links never silently replace your work
+## S12. Docs: series docs at the root, member docs in the member
 
-Opening a share link (on load, or pasted into an open tab) keeps the previous
-editor contents aside and offers "Restore my previous code" until you do.
+- `docs/`: series research, plan, decisions, acceptance, handover, the next-session
+  note and the owner's to-do list.
+- `packages/<member>/docs/`: that member's own design notes.
+- `docs/screenshots/` stays where it is, because the README and possibly
+  external pages link to it.

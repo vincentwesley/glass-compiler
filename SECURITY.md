@@ -1,9 +1,12 @@
 # Security policy
 
-Glass Compiler is a static web page. It has no server, no accounts, no cookies,
-no analytics and makes no network requests after the page loads. Programs you
-type run inside a small virtual machine written in TypeScript; nothing is ever
-passed to `eval` or `new Function`.
+The Glass series (Glass Compiler, the hub and the members that follow) is a set
+of static web pages. They have no server, no accounts, no cookies, no analytics
+and make no network requests to other sites. Programs you type run inside small
+virtual machines written in TypeScript or Rust compiled to WebAssembly; nothing
+is ever passed to `eval` or `new Function`. Files you load (for example a ROM in
+Glass Console) stay in your browser. Every page carries a strict Content
+Security Policy; pages that run WebAssembly add only `'wasm-unsafe-eval'`.
 
 ## Supported versions
 
