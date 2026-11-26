@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; manifest-src 'self'; worker-src 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="author" content="Vin, Vin's Atelier" />
+    <link rel="author" href="/humans.txt" />
+    <meta name="theme-color" content="#11150e" />
+    <title>Glass Wasm</title>
+    <meta
+      name="description"
+      content="A WebAssembly virtual machine written from scratch in Rust, with a debugger you can see through: value stack, locals, call frames and linear memory at every step. Graded live by the official spec testsuite."
+    />
+    <link rel="canonical" href="https://vincentwesley.github.io/glass-compiler/wasm/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script src="/theme-init.js"></script>
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#panel-source">Skip to the module</a>
+
+    <header class="masthead">
+      <div class="brand">
+        <!-- glass:mark -->
+        <div>
+          <h1 class="title">Glass Wasm</h1>
+          <p class="tagline">A WebAssembly machine you can see through. Written from scratch in <strong>Rust</strong>.</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <label class="field">
+          <span class="pixel-label">Example</span>
+          <select id="examples" class="select" data-testid="examples"></select>
+        </label>
+        <button id="tour-start" type="button" class="btn">Tour</button>
+        <button id="theme-toggle" type="button" class="btn" aria-pressed="false">
+          <span class="theme-icon" aria-hidden="true"></span><span class="theme-text">Light theme</span>
+        </button>
+      </div>
+    </header>
+
+    <nav class="rail" aria-label="Debugger panels">
+      <ol>
+        <li><a href="#panel-source"><span class="pixel-label">00</span> Module</a></li>
+        <li><a href="#panel-code"><span class="pixel-label">01</span> Code</a></li>
+        <li><a href="#panel-machine"><span class="pixel-label">02</span> Machine</a></li>
+        <li><a href="#panel-memory"><span class="pixel-label">03</span> Memory</a></li>
+        <li><a href="#panel-spec"><span class="pixel-label">04</span> Spec tests</a></li>
+      </ol>
+    </nav>
+
+    <noscript>
+      <div class="card noscript">
+        <h2>JavaScript is needed for the debugger</h2>
+        <p>
+          Glass Wasm runs its virtual machine in your browser, so the debugger needs JavaScript and WebAssembly. The
+          recorded spec testsuite results below are readable without it.
+        </p>
+      </div>
+    </noscript>
+
+    <main class="workspace wasm-workspace">
+      <section id="panel-source" class="card panel panel-source" aria-labelledby="h-source" tabindex="-1">
+        <header class="panel-head">
+          <h2 id="h-source"><span class="pixel-label">00</span> Module</h2>
+          <span id="source-status" class="panel-meta" aria-live="polite"></span>
+        </header>
+        <p id="example-blurb" class="panel-sub"></p>
+        <label class="visually-hidden" for="source">WebAssembly module, text format</label>
+        <textarea id="source" class="wat-editor" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
+        <p id="source-error" class="diag" role="alert" hidden></p>
+        <form id="run-bar" class="run-bar">
+          <label class="field">
+            <span class="pixel-label">Call</span>
+            <select id="run-export" class="select"></select>
+          </label>
+          <span id="run-args" class="run-args"></span>
+          <button id="run" type="submit" class="btn btn-primary">Run</button>
+        </form>
+        <div class="share-row">
+          <button id="share" type="button" class="btn btn-small">Copy share link</button>
+          <span id="share-status" class="small muted" role="status"></span>
+        </div>
+        <label class="share-field">
+          <span class="visually-hidden">Share link</span>
+          <input id="share-url" type="text" readonly hidden />
+        </label>
+      </section>
+
+      <section id="panel-code" class="card panel panel-code" aria-labelledby="h-code" tabindex="-1">
+        <header class="panel-head">
+          <h2 id="h-code"><span class="pixel-label">01</span> Code</h2>
+          <span class="panel-meta"><span id="code-count">0</span> instructions · validated</span>
+        </header>
+        <div id="code-body" class="panel-body scroll"></div>
+        <p id="code-help" class="panel-foot small" aria-live="polite"></p>
+      </section>
+
+      <section id="panel-machine" class="card panel panel-machine" aria-labelledby="h-machine" tabindex="-1">
+        <header class="panel-head">
+          <h2 id="h-machine"><span class="pixel-label">02</span> Machine</h2>
+          <span class="panel-meta"><span id="machine-count">0</span> steps · interpreter</span>
+        </header>
+        <div id="machine-body" class="panel-body"></div>
+      </section>
+
+      <section id="panel-memory" class="card panel panel-memory" aria-labelledby="h-memory" tabindex="-1">
+        <header class="panel-head">
+          <h2 id="h-memory"><span class="pixel-label">03</span> Linear memory</h2>
+          <span id="memory-meta" class="panel-meta">no memory</span>
+        </header>
+        <div id="memory-body" class="panel-body"></div>
+      </section>
+    </main>
+
+    <aside id="lineage" class="lineage" aria-label="Selected instruction" aria-live="polite"></aside>
+
+    <section id="panel-spec" class="card panel spec-panel" aria-labelledby="h-spec" tabindex="-1">
+      <header class="panel-head">
+        <h2 id="h-spec"><span class="pixel-label">04</span> Graded by the official spec testsuite</h2>
+      </header>
+      <p class="panel-sub">
+        Every <code>.wast</code> file of the WebAssembly 1.0 core testsuite, as published by the WebAssembly working
+        group. A command is a module to load, a call to check, or a module that must be rejected as malformed, invalid
+        or unlinkable. The recorded column comes from the command-line run; press the button to run the same files with
+        the same machine, here in your browser.
+      </p>
+      <div class="spec-actions">
+        <button id="spec-run" type="button" class="btn btn-primary" disabled>Run all files in your browser</button>
+        <progress id="spec-progress" max="1" value="0" hidden></progress>
+        <span id="spec-status" class="small" role="status"></span>
+      </div>
+      <!-- wasm:recorded -->
+      <p class="small muted">
+        Tests: <a href="https://github.com/WebAssembly/spec/tree/wg-1.0/test/core">WebAssembly/spec, tag wg-1.0</a>,
+        Apache License 2.0 (<a href="licenses/WEBASSEMBLY-TESTSUITE-LICENSE.txt">licence</a>).
+      </p>
+    </section>
+
+    <footer class="credits">
+      <p>
+        <span class="pixel-label">Glass Wasm</span> · part of <a href="../series/">the Glass series</a> · made by Vin,
+        Vin's Atelier · MIT licence · fonts under the <a href="licenses/FONTS-OFL.txt">SIL Open Font License</a>
+      </p>
+      <!-- glass:credits project="Glass Wasm" -->
+    </footer>
+  </body>
+</html>

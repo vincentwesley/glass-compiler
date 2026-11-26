@@ -24,24 +24,35 @@
 - **Pixel-identity check for refactors.** Build `origin/main` in a git worktree,
   serve both, screenshot at 1440px and 375px in dark and light, and diff. This
   is how M1 proved nothing changed.
-- **Rust.** `rustup target add wasm32-unknown-unknown` works here. Build with
-  cargo only, without wasm-pack (DECISIONS S8).
+- **Rust.** The toolchain is pinned in `rust-toolchain.toml` (rustup installs it,
+  with the wasm32 target, on first use). Build with cargo only, without
+  wasm-pack (DECISIONS S8). Run `git submodule update --init --depth 1` before
+  anything touching Glass Wasm.
 
 ## Current state
 
-- **M1 is done.** The series monorepo is live:
-  - Glass Compiler at `/glass-compiler/`.
-  - The hub at `/glass-compiler/series/`.
-  - glass-ui shared by both.
-- Next is **M2, the Glass Wasm interpreter**:
-  1. Add `packages/wasm/` with `crate/` (Rust: binary decoder, validator,
-     interpreter, `.wast` parser and runner, CLI) and `web/` (debugger page at
-     `/glass-compiler/wasm/`).
-  2. Add the testsuite as a git submodule at `packages/wasm/testsuite`, pinned to
-     tag `wg-1.0` (977f970…).
-  3. First grade: the integer and control-flow `.wast` files (list in ACCEPTANCE).
-  4. Record the counts with `scripts/record-results.mjs wasm`, add the member's
-     CI workflow, and flip its `status` to `'live'` in `site.config.mjs`.
+- **M1 (series monorepo) and M2 (Glass Wasm) are done.**
+  - Glass Compiler is at `/glass-compiler/`.
+  - The hub is at `/glass-compiler/series/`.
+  - Glass Wasm is at `/glass-compiler/wasm/`. It passes 19,270 / 19,270
+    commands of the WebAssembly 1.0 testsuite.
+- Next is **M3, the Pane → Wasm backend** (PLAN.md):
+  1. Add a Wasm code generator in `packages/compiler/src/lang/`: Pane AST →
+     `glass-wasm`-compatible binary module. Write the encoder in TypeScript;
+     the Rust side already decodes.
+     - Globals become Wasm globals.
+     - Functions become Wasm functions.
+     - Strings and `print` go through host imports.
+     - Every instruction carries its Pane node id, in a custom name section or a
+       side table.
+  2. Add a fifth stage panel, "Wasm", to Glass Compiler, linked like the others.
+  3. Add "Open in Glass Wasm", which passes the module in the fragment
+     (`#wasm=`). Glass Wasm's `gw_load` already takes binary.
+  4. Known-answer tests: every compiler example gives the same output from the
+     bytecode VM, from Glass Wasm (its Rust VM in Node) and from Node's own
+     WebAssembly.
+- Glass Wasm only implements the `spectest` host imports. Pane's `print` of
+  strings needs a host import designed in M3 (record it in DECISIONS).
 
 ## Known gaps
 

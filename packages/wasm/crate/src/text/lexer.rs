@@ -71,7 +71,12 @@ pub fn parse_sexps(src: &str) -> Result<Vec<Sexp>, LexError> {
     let b = src.as_bytes();
     let mut i = 0;
     let mut stack: Vec<(Vec<Sexp>, usize)> = vec![(Vec::new(), 0)];
-    let err = |message: &str, offset: usize| Err(LexError { message: message.to_string(), offset });
+    let err = |message: &str, offset: usize| {
+        Err(LexError {
+            message: message.to_string(),
+            offset,
+        })
+    };
     while i < b.len() {
         let c = b[i];
         match c {
@@ -111,7 +116,11 @@ pub fn parse_sexps(src: &str) -> Result<Vec<Sexp>, LexError> {
                     return err("unexpected )", i);
                 }
                 let (items, start) = stack.pop().unwrap();
-                stack.last_mut().unwrap().0.push(Sexp::List(items, start, i));
+                stack
+                    .last_mut()
+                    .unwrap()
+                    .0
+                    .push(Sexp::List(items, start, i));
                 i += 1;
             }
             b'"' => {
@@ -119,14 +128,18 @@ pub fn parse_sexps(src: &str) -> Result<Vec<Sexp>, LexError> {
                 i += 1;
                 let mut s = Vec::new();
                 loop {
-                    let Some(&c) = b.get(i) else { return err("unclosed string", start) };
+                    let Some(&c) = b.get(i) else {
+                        return err("unclosed string", start);
+                    };
                     match c {
                         b'"' => {
                             i += 1;
                             break;
                         }
                         b'\\' => {
-                            let Some(&e) = b.get(i + 1) else { return err("unclosed string", start) };
+                            let Some(&e) = b.get(i + 1) else {
+                                return err("unclosed string", start);
+                            };
                             i += 2;
                             match e {
                                 b'n' => s.push(b'\n'),
@@ -139,21 +152,30 @@ pub fn parse_sexps(src: &str) -> Result<Vec<Sexp>, LexError> {
                                     if b.get(i) != Some(&b'{') {
                                         return err("malformed escape", i);
                                     }
-                                    let close = b[i..].iter().position(|&c| c == b'}').map(|p| p + i);
-                                    let Some(close) = close else { return err("malformed escape", i) };
+                                    let close =
+                                        b[i..].iter().position(|&c| c == b'}').map(|p| p + i);
+                                    let Some(close) = close else {
+                                        return err("malformed escape", i);
+                                    };
                                     let hex = &src[i + 1..close];
                                     if hex.is_empty() || !crate::float::check_underscores(hex) {
                                         return err("malformed escape", i);
                                     }
-                                    let digits: String = hex.chars().filter(|&c| c != '_').collect();
+                                    let digits: String =
+                                        hex.chars().filter(|&c| c != '_').collect();
                                     let cp = u32::from_str_radix(&digits, 16).ok();
-                                    let Some(ch) = cp.and_then(char::from_u32) else { return err("malformed escape", i) };
+                                    let Some(ch) = cp.and_then(char::from_u32) else {
+                                        return err("malformed escape", i);
+                                    };
                                     let mut buf = [0u8; 4];
                                     s.extend_from_slice(ch.encode_utf8(&mut buf).as_bytes());
                                     i = close + 1;
                                 }
                                 h1 if h1.is_ascii_hexdigit() => {
-                                    let Some(&h2) = b.get(i).filter(|c| c.is_ascii_hexdigit()) else { return err("malformed escape", i) };
+                                    let Some(&h2) = b.get(i).filter(|c| c.is_ascii_hexdigit())
+                                    else {
+                                        return err("malformed escape", i);
+                                    };
                                     let v = (hex_val(h1) << 4) | hex_val(h2);
                                     s.push(v);
                                     i += 1;
@@ -168,7 +190,11 @@ pub fn parse_sexps(src: &str) -> Result<Vec<Sexp>, LexError> {
                         }
                     }
                 }
-                stack.last_mut().unwrap().0.push(Sexp::Tok(Tok::Str(s), start));
+                stack
+                    .last_mut()
+                    .unwrap()
+                    .0
+                    .push(Sexp::Tok(Tok::Str(s), start));
             }
             _ if is_idchar(c) => {
                 let start = i;
@@ -211,7 +237,8 @@ mod tests {
 
     #[test]
     fn nests_lists_and_skips_comments() {
-        let s = parse_sexps("(module ;; hi\n (; nested (; deep ;) ;) (func $f (i32.const -1)))").unwrap();
+        let s = parse_sexps("(module ;; hi\n (; nested (; deep ;) ;) (func $f (i32.const -1)))")
+            .unwrap();
         assert_eq!(s.len(), 1);
         let m = s[0].list().unwrap();
         assert_eq!(m[0].atom(), Some("module"));

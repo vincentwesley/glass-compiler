@@ -131,11 +131,23 @@ pub enum Instr {
     Unreachable,
     Nop,
     /// `end` is the index of the matching `End`.
-    Block { ty: BlockType, end: u32 },
-    Loop { ty: BlockType, end: u32 },
+    Block {
+        ty: BlockType,
+        end: u32,
+    },
+    Loop {
+        ty: BlockType,
+        end: u32,
+    },
     /// `else_` is the index of the matching `Else`, or of the `End` when there is none.
-    If { ty: BlockType, else_: u32, end: u32 },
-    Else { end: u32 },
+    If {
+        ty: BlockType,
+        else_: u32,
+        end: u32,
+    },
+    Else {
+        end: u32,
+    },
     End,
     Br(u32),
     BrIf(u32),
@@ -276,7 +288,9 @@ impl Module {
                 i -= 1;
             }
         }
-        self.funcs.get(i).and_then(|f| self.types.get(f.type_idx as usize))
+        self.funcs
+            .get(i)
+            .and_then(|f| self.types.get(f.type_idx as usize))
     }
 
     pub fn global_type(&self, idx: u32) -> Option<GlobalType> {
@@ -323,7 +337,9 @@ pub fn link_blocks(body: &mut [Instr]) -> Result<(), &'static str> {
         match body[i] {
             Instr::Block { .. } | Instr::Loop { .. } | Instr::If { .. } => open.push(i),
             Instr::Else { .. } => {
-                let Some(&start) = open.last() else { return Err("else without if") };
+                let Some(&start) = open.last() else {
+                    return Err("else without if");
+                };
                 match &mut body[start] {
                     Instr::If { else_, .. } if *else_ == u32::MAX => *else_ = i as u32,
                     _ => return Err("else without if"),

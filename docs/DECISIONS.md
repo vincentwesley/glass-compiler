@@ -118,9 +118,11 @@ sign-off sits in the card's brand slot. The card's kit token names (`--fg`,
 
 ## S9. Glass Wasm reads the official testsuite itself
 
-- `packages/wasm/testsuite` is a git submodule of
-  [WebAssembly/testsuite](https://github.com/WebAssembly/testsuite), pinned to tag
-  `wg-1.0` for the 1.0 feature set.
+- `packages/wasm/spec` is a shallow git submodule of
+  [WebAssembly/spec](https://github.com/WebAssembly/spec) pinned at tag `wg-1.0`
+  (977f970), and the tests are its `test/core`. (The WebAssembly/testsuite mirror
+  has no tags, and its `main` mixes in 2.0 and 3.0 features; the spec repo's
+  `wg-1.0` tag is the exact 1.0 snapshot the mirror copies.)
 - The VM includes its own `.wast` parser (RESEARCH §5). The same Rust code runs
   the suite in `cargo test`, in the CLI and in the browser.
 - The page shows passes per `.wast` file, computed live. A committed
@@ -162,3 +164,32 @@ interpreter is complete. Two reasons:
 - `packages/<member>/docs/`: that member's own design notes.
 - `docs/screenshots/` stays where it is, because the README and possibly
   external pages link to it.
+
+## S13. The debugger replays instead of recording
+
+Stepping backwards and scrubbing ask the VM for "the machine after step n". The
+session re-runs the call from a fresh instance and stops at n. A run is
+deterministic, so this is exact, and it costs nothing in memory. Glass Compiler
+stores a snapshot per step, which is fine for its small VM; WebAssembly programs
+touch up to 64 KiB pages of memory, so snapshots would cost too much. Measured on 2026-11-26 with the VM itself
+running as WebAssembly in Node, it does about 34 million steps a second. A
+replay to step 199,000 of a loop took 11.6 ms (a full run for the total plus the
+partial run), so scrubbing anywhere under the 200,000-step limit is instant.
+A compact per-step
+trace (function, pc) of the full run drives the timeline ticks and "follow
+selection".
+
+## S14. How the testsuite is graded
+
+- `assert_return*` results are compared bit for bit, with NaN patterns as the
+  spec defines them.
+- `assert_trap` and `assert_exhaustion` need the trap message to start with the
+  expected text, as the reference interpreter checks.
+- `assert_malformed`, `assert_invalid` and `assert_unlinkable` pass when the
+  module is rejected at the right stage: text or binary decoding, validation, or
+  linking and instantiation. Wording isn't compared. Independent implementations
+  word their errors differently, and the reference runner doesn't require it
+  either.
+- Nothing is skipped. If a test is ever skipped, it is listed on the page with
+  its reason.
+

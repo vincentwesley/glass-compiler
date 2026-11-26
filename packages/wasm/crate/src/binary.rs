@@ -21,11 +21,18 @@ struct Reader<'a> {
 
 impl<'a> Reader<'a> {
     fn err<T>(&self, message: &str) -> Result<T> {
-        Err(DecodeError { message: message.to_string(), offset: self.pos })
+        Err(DecodeError {
+            message: message.to_string(),
+            offset: self.pos,
+        })
     }
 
     fn eof_message(&self) -> &'static str {
-        if self.end < self.bytes.len() { "unexpected end of section or function" } else { "unexpected end" }
+        if self.end < self.bytes.len() {
+            "unexpected end of section or function"
+        } else {
+            "unexpected end"
+        }
     }
 
     fn byte(&mut self) -> Result<u8> {
@@ -111,7 +118,11 @@ impl<'a> Reader<'a> {
     fn name(&mut self) -> Result<String> {
         let len = self.u32()? as usize;
         if len > self.end - self.pos {
-            return self.err(if self.end < self.bytes.len() { "unexpected end of section or function" } else { "length out of bounds" });
+            return self.err(if self.end < self.bytes.len() {
+                "unexpected end of section or function"
+            } else {
+                "length out of bounds"
+            });
         }
         let bytes = self.take(len)?;
         match std::str::from_utf8(bytes) {
@@ -132,10 +143,16 @@ impl<'a> Reader<'a> {
 
     fn limits(&mut self) -> Result<Limits> {
         match self.byte()? {
-            0x00 => Ok(Limits { min: self.u32()?, max: None }),
+            0x00 => Ok(Limits {
+                min: self.u32()?,
+                max: None,
+            }),
             0x01 => {
                 let min = self.u32()?;
-                Ok(Limits { min, max: Some(self.u32()?) })
+                Ok(Limits {
+                    min,
+                    max: Some(self.u32()?),
+                })
             }
             _ => self.err("integer too large"),
         }
@@ -202,15 +219,25 @@ impl<'a> Reader<'a> {
                 0x01 => Instr::Nop,
                 0x02 => {
                     depth += 1;
-                    Instr::Block { ty: self.block_type()?, end: UNLINKED }
+                    Instr::Block {
+                        ty: self.block_type()?,
+                        end: UNLINKED,
+                    }
                 }
                 0x03 => {
                     depth += 1;
-                    Instr::Loop { ty: self.block_type()?, end: UNLINKED }
+                    Instr::Loop {
+                        ty: self.block_type()?,
+                        end: UNLINKED,
+                    }
                 }
                 0x04 => {
                     depth += 1;
-                    Instr::If { ty: self.block_type()?, else_: UNLINKED, end: UNLINKED }
+                    Instr::If {
+                        ty: self.block_type()?,
+                        else_: UNLINKED,
+                        end: UNLINKED,
+                    }
                 }
                 0x05 => Instr::Else { end: UNLINKED },
                 0x0b => Instr::End,
@@ -242,7 +269,11 @@ impl<'a> Reader<'a> {
                     if self.byte()? != 0 {
                         return self.err("zero flag expected");
                     }
-                    if op == 0x3f { Instr::MemorySize } else { Instr::MemoryGrow }
+                    if op == 0x3f {
+                        Instr::MemorySize
+                    } else {
+                        Instr::MemoryGrow
+                    }
                 }
                 0x41 => Instr::I32Const(self.sleb(32)? as i32),
                 0x42 => Instr::I64Const(self.sleb(64)?),
@@ -252,7 +283,12 @@ impl<'a> Reader<'a> {
                     debug_assert!(num_op(op).is_some() && mem_op(op).is_none());
                     Instr::Num(op)
                 }
-                _ => return Err(DecodeError { message: "illegal opcode".into(), offset: at as usize }),
+                _ => {
+                    return Err(DecodeError {
+                        message: "illegal opcode".into(),
+                        offset: at as usize,
+                    })
+                }
             };
             let is_end = ins == Instr::End;
             out.push(ins);
@@ -269,13 +305,30 @@ impl<'a> Reader<'a> {
 
 /// Decodes a binary module.
 pub fn decode(bytes: &[u8]) -> Result<Module> {
-    let mut r = Reader { bytes, pos: 0, end: bytes.len() };
-    if r.take(4).map_err(|_| DecodeError { message: "unexpected end".into(), offset: 0 })? != b"\0asm" {
-        return Err(DecodeError { message: "magic header not detected".into(), offset: 0 });
+    let mut r = Reader {
+        bytes,
+        pos: 0,
+        end: bytes.len(),
+    };
+    if r.take(4).map_err(|_| DecodeError {
+        message: "unexpected end".into(),
+        offset: 0,
+    })? != b"\0asm"
+    {
+        return Err(DecodeError {
+            message: "magic header not detected".into(),
+            offset: 0,
+        });
     }
-    let version = r.take(4).map_err(|_| DecodeError { message: "unexpected end".into(), offset: 4 })?;
+    let version = r.take(4).map_err(|_| DecodeError {
+        message: "unexpected end".into(),
+        offset: 4,
+    })?;
     if version != [1, 0, 0, 0] {
-        return Err(DecodeError { message: "unknown binary version".into(), offset: 4 });
+        return Err(DecodeError {
+            message: "unknown binary version".into(),
+            offset: 4,
+        });
     }
 
     let mut m = Module::default();
@@ -349,7 +402,11 @@ pub fn decode(bytes: &[u8]) -> Result<Module> {
                         3 => ExternKind::Global,
                         _ => return r.err("malformed export kind"),
                     };
-                    Ok(Export { name, kind, index: r.u32()? })
+                    Ok(Export {
+                        name,
+                        kind,
+                        index: r.u32()?,
+                    })
                 })?
             }
             8 => m.start = Some(r.u32()?),
@@ -358,7 +415,11 @@ pub fn decode(bytes: &[u8]) -> Result<Module> {
                     let table = r.u32()?;
                     let (offset, _) = r.expr()?;
                     let init = r.vec(|r| r.u32())?;
-                    Ok(Elem { table, offset, init })
+                    Ok(Elem {
+                        table,
+                        offset,
+                        init,
+                    })
                 })?
             }
             10 => {
@@ -384,8 +445,17 @@ pub fn decode(bytes: &[u8]) -> Result<Module> {
                         return r.err("section size mismatch");
                     }
                     r.end = outer_end;
-                    link_blocks(&mut body).map_err(|e| DecodeError { message: e.into(), offset: r.pos })?;
-                    Ok(Func { type_idx: 0, locals, body, offsets, ..Default::default() })
+                    link_blocks(&mut body).map_err(|e| DecodeError {
+                        message: e.into(),
+                        offset: r.pos,
+                    })?;
+                    Ok(Func {
+                        type_idx: 0,
+                        locals,
+                        body,
+                        offsets,
+                        ..Default::default()
+                    })
                 })?;
                 code_count = Some(bodies.len());
                 m.funcs = bodies;
@@ -396,7 +466,11 @@ pub fn decode(bytes: &[u8]) -> Result<Module> {
                     let (offset, _) = r.expr()?;
                     let len = r.u32()? as usize;
                     let bytes = r.take(len)?.to_vec();
-                    Ok(Data { memory, offset, bytes })
+                    Ok(Data {
+                        memory,
+                        offset,
+                        bytes,
+                    })
                 })?
             }
             _ => unreachable!(),
@@ -408,7 +482,10 @@ pub fn decode(bytes: &[u8]) -> Result<Module> {
     }
 
     if func_types.len() != code_count.unwrap_or(0) {
-        return Err(DecodeError { message: "function and code section have inconsistent lengths".into(), offset: bytes.len() });
+        return Err(DecodeError {
+            message: "function and code section have inconsistent lengths".into(),
+            offset: bytes.len(),
+        });
     }
     for (f, t) in m.funcs.iter_mut().zip(func_types) {
         f.type_idx = t;
@@ -437,32 +514,80 @@ mod tests {
         ]);
         let m = decode(&bytes).unwrap();
         assert_eq!(m.types[0].params, vec![ValType::I32, ValType::I32]);
-        assert_eq!(m.funcs[0].body, vec![Instr::LocalGet(0), Instr::LocalGet(1), Instr::Num(0x6a), Instr::End]);
+        assert_eq!(
+            m.funcs[0].body,
+            vec![
+                Instr::LocalGet(0),
+                Instr::LocalGet(1),
+                Instr::Num(0x6a),
+                Instr::End
+            ]
+        );
         assert_eq!(m.exports[0].name, "add");
     }
 
     #[test]
     fn reports_spec_messages() {
-        assert_eq!(decode(b"\0asx\x01\0\0\0").unwrap_err().message, "magic header not detected");
-        assert_eq!(decode(b"\0asm\x02\0\0\0").unwrap_err().message, "unknown binary version");
-        assert_eq!(decode(b"\0asm\x01\0").unwrap_err().message, "unexpected end");
+        assert_eq!(
+            decode(b"\0asx\x01\0\0\0").unwrap_err().message,
+            "magic header not detected"
+        );
+        assert_eq!(
+            decode(b"\0asm\x02\0\0\0").unwrap_err().message,
+            "unknown binary version"
+        );
+        assert_eq!(
+            decode(b"\0asm\x01\0").unwrap_err().message,
+            "unexpected end"
+        );
         // memory with min encoded in 6 LEB bytes
-        assert_eq!(decode(&module(&[5, 8, 1, 0, 0x82, 0x80, 0x80, 0x80, 0x80, 0x00])).unwrap_err().message, "integer representation too long");
+        assert_eq!(
+            decode(&module(&[5, 8, 1, 0, 0x82, 0x80, 0x80, 0x80, 0x80, 0x00]))
+                .unwrap_err()
+                .message,
+            "integer representation too long"
+        );
         // memory min with high bits set in the 5th byte
-        assert_eq!(decode(&module(&[5, 7, 1, 0, 0x82, 0x80, 0x80, 0x80, 0x10])).unwrap_err().message, "integer too large");
+        assert_eq!(
+            decode(&module(&[5, 7, 1, 0, 0x82, 0x80, 0x80, 0x80, 0x10]))
+                .unwrap_err()
+                .message,
+            "integer too large"
+        );
         // a function section with no code section
-        assert_eq!(decode(&module(&[1, 4, 1, 0x60, 0, 0, 3, 2, 1, 0])).unwrap_err().message, "function and code section have inconsistent lengths");
+        assert_eq!(
+            decode(&module(&[1, 4, 1, 0x60, 0, 0, 3, 2, 1, 0]))
+                .unwrap_err()
+                .message,
+            "function and code section have inconsistent lengths"
+        );
     }
 
     #[test]
     fn signed_leb_rules() {
-        let mut r = Reader { bytes: &[0x7f], pos: 0, end: 1 };
+        let mut r = Reader {
+            bytes: &[0x7f],
+            pos: 0,
+            end: 1,
+        };
         assert_eq!(r.sleb(32).unwrap(), -1);
-        let mut r = Reader { bytes: &[0xff, 0xff, 0xff, 0xff, 0x7f], pos: 0, end: 5 };
+        let mut r = Reader {
+            bytes: &[0xff, 0xff, 0xff, 0xff, 0x7f],
+            pos: 0,
+            end: 5,
+        };
         assert_eq!(r.sleb(32).unwrap(), -1);
-        let mut r = Reader { bytes: &[0xff, 0xff, 0xff, 0xff, 0x4f], pos: 0, end: 5 };
+        let mut r = Reader {
+            bytes: &[0xff, 0xff, 0xff, 0xff, 0x4f],
+            pos: 0,
+            end: 5,
+        };
         assert_eq!(r.sleb(32).unwrap_err().message, "integer too large");
-        let mut r = Reader { bytes: &[0x80, 0x80, 0x80, 0x80, 0x08], pos: 0, end: 5 };
+        let mut r = Reader {
+            bytes: &[0x80, 0x80, 0x80, 0x80, 0x08],
+            pos: 0,
+            end: 5,
+        };
         assert_eq!(r.sleb(32).unwrap_err().message, "integer too large");
     }
 }

@@ -1,0 +1,385 @@
+/* Glass Wasm: layout of the debugger and the panels only it has. Everything
+   else (tokens, cards, buttons, stepper, stack, frames) comes from glass-ui. */
+
+.wasm-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'source' 'code' 'machine' 'memory';
+  gap: 26px;
+  max-width: 1640px;
+  margin: 0 auto;
+  padding: 10px var(--gutter) 30px;
+}
+
+.panel-source { grid-area: source; }
+.panel-code { grid-area: code; }
+.panel-machine { grid-area: machine; }
+.panel-memory { grid-area: memory; }
+
+@media (min-width: 760px) {
+  .wasm-workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'source code'
+      'machine machine'
+      'memory memory';
+  }
+}
+
+@media (min-width: 1180px) {
+  .wasm-workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr) minmax(0, 1.25fr);
+    grid-template-rows: 560px auto;
+    grid-template-areas:
+      'source code machine'
+      'memory memory machine';
+  }
+}
+
+@media (max-width: 1179px) {
+  .panel-code .panel-body { max-height: 420px; }
+}
+
+/* ---------- module editor and run bar ---------- */
+
+.wat-editor {
+  flex: 1 1 auto;
+  min-height: 220px;
+  width: 100%;
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--bg-deep);
+  color: var(--ink);
+  font: 13px/1.6 var(--font-mono);
+  tab-size: 2;
+  resize: vertical;
+}
+
+.wat-editor:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+@media (max-width: 1179px) {
+  .wat-editor { height: 320px; flex: none; }
+}
+
+.run-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--s2) var(--s3);
+  margin-top: var(--s3);
+}
+
+.run-args {
+  display: contents;
+}
+
+.arg {
+  width: 7.5rem;
+  min-height: 40px;
+  padding: 4px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  background: var(--bg-deep);
+  color: var(--ink);
+  font: 14px var(--font-mono);
+}
+
+.panel-source .diag {
+  margin-top: var(--s2);
+  cursor: default;
+}
+
+/* ---------- code ---------- */
+
+.code-func + .code-func {
+  margin-top: var(--s4);
+}
+
+.code-func-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+  margin-bottom: 4px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.code-func-name {
+  color: var(--accent-ink);
+}
+
+.code-func-type {
+  color: var(--ink-dim);
+  font-weight: 400;
+}
+
+.code-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.code-line {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  min-height: 26px;
+  padding: 1px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 13px/1.5 var(--font-mono);
+  text-align: left;
+  cursor: pointer;
+}
+
+.code-line:hover {
+  background: var(--surface-3);
+}
+
+.code-pc {
+  flex: none;
+  width: 2.2ch;
+  color: var(--ink-faint);
+}
+
+.code-line.d1 .code-text { padding-left: 2ch; }
+.code-line.d2 .code-text { padding-left: 4ch; }
+.code-line.d3 .code-text { padding-left: 6ch; }
+.code-line.d4 .code-text { padding-left: 8ch; }
+.code-line.d5 .code-text { padding-left: 10ch; }
+.code-line.d6 .code-text { padding-left: 12ch; }
+.code-line.d7 .code-text { padding-left: 14ch; }
+.code-line.d8 .code-text { padding-left: 16ch; }
+
+.code-line.is-exec .code-pc {
+  color: var(--peach-ink);
+}
+
+/* ---------- machine ---------- */
+
+.panel-machine .panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.wasm-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.wasm-grid .vm-output {
+  grid-column: 1 / -1;
+}
+
+.val-type {
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+.v-i32,
+.v-i64 { color: var(--c-literal); }
+.v-f32,
+.v-f64 { color: var(--c-string); }
+
+.role {
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+.blocks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.block-row + .block-row {
+  margin-top: 4px;
+}
+
+.block-depth {
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+}
+
+.block-kind {
+  color: var(--lav-ink);
+  font-family: var(--font-mono);
+}
+
+.out-text {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* ---------- memory ---------- */
+
+.mem-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--s2) var(--s3);
+  margin-bottom: var(--s3);
+}
+
+.mem-addr {
+  width: 7rem;
+  min-height: 40px;
+  padding: 4px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  background: var(--bg-deep);
+  color: var(--ink);
+  font: 14px var(--font-mono);
+}
+
+.mem-grid {
+  overflow-x: auto;
+  font: 13px/1.6 var(--font-mono);
+}
+
+.mem-row {
+  display: flex;
+  gap: 14px;
+  white-space: nowrap;
+}
+
+.mem-off {
+  color: var(--ink-faint);
+}
+
+.mem-bytes {
+  display: inline-flex;
+  gap: 0.6ch;
+}
+
+.mem-byte {
+  padding: 0 1px;
+}
+
+.mem-zero {
+  color: var(--ink-faint);
+}
+
+.mem-write {
+  background: var(--peach-soft);
+  box-shadow: inset 0 -2px 0 var(--peach);
+}
+
+.mem-read {
+  background: var(--lav-soft);
+  box-shadow: inset 0 -2px 0 var(--lav);
+}
+
+.mem-ascii {
+  color: var(--ink-dim);
+  letter-spacing: 0.05em;
+}
+
+.mem-note {
+  margin-top: var(--s2);
+  color: var(--ink-dim);
+}
+
+/* ---------- lineage source excerpt ---------- */
+
+.lin-src {
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+}
+
+.lin-src mark {
+  background: var(--accent-soft);
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+/* ---------- spec testsuite ---------- */
+
+.spec-panel {
+  /* Same outer gutters as the workspace above, so the card's frame never touches the viewport edge. */
+  max-width: calc(1640px - 2 * var(--gutter));
+  margin: 26px var(--gutter) 0;
+  padding: 16px 20px 20px;
+}
+
+@media (min-width: 1688px) {
+  .spec-panel {
+    margin-inline: auto;
+  }
+}
+
+.spec-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s4);
+  margin: var(--s3) 0;
+}
+
+.spec-summary {
+  margin: var(--s3) 0;
+  font-size: var(--step-1);
+}
+
+.spec-big {
+  font-family: var(--font-mono);
+  color: var(--accent-ink);
+}
+
+.spec-panel .table-wrap {
+  max-height: 520px;
+  overflow: auto;
+  border: 1px solid var(--line);
+}
+
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.spec-table th,
+.spec-table td {
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.spec-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-2);
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.spec-table .num {
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.spec-table .is-pass {
+  color: var(--accent-ink);
+}
+
+.spec-table .is-fail {
+  color: var(--bad);
+}
+
+progress {
+  width: 12rem;
+  height: 10px;
+  accent-color: var(--accent);
+}

@@ -15,8 +15,14 @@ pub struct Format {
     pub exp_bits: u32,
 }
 
-pub const F32: Format = Format { precision: 24, exp_bits: 8 };
-pub const F64: Format = Format { precision: 53, exp_bits: 11 };
+pub const F32: Format = Format {
+    precision: 24,
+    exp_bits: 8,
+};
+pub const F64: Format = Format {
+    precision: 53,
+    exp_bits: 11,
+};
 
 impl Format {
     fn bias(self) -> i32 {
@@ -68,7 +74,10 @@ pub fn parse(text: &str, fmt: Format) -> Result<u64, FloatError> {
         return Err(FloatError::Malformed);
     }
     let clean: String = body.chars().filter(|&c| c != '_').collect();
-    if !clean.bytes().all(|c| c.is_ascii_digit() || matches!(c, b'.' | b'e' | b'E' | b'+' | b'-')) {
+    if !clean
+        .bytes()
+        .all(|c| c.is_ascii_digit() || matches!(c, b'.' | b'e' | b'E' | b'+' | b'-'))
+    {
         return Err(FloatError::Malformed);
     }
     let bits = if fmt.precision == 24 {
@@ -90,7 +99,10 @@ pub fn parse(text: &str, fmt: Format) -> Result<u64, FloatError> {
 /// In a decimal literal, underscores may only sit between two decimal digits.
 pub fn check_underscores_dec(s: &str) -> bool {
     let b = s.as_bytes();
-    b.iter().enumerate().all(|(i, &c)| c != b'_' || (i > 0 && i + 1 < b.len() && b[i - 1].is_ascii_digit() && b[i + 1].is_ascii_digit()))
+    b.iter().enumerate().all(|(i, &c)| {
+        c != b'_'
+            || (i > 0 && i + 1 < b.len() && b[i - 1].is_ascii_digit() && b[i + 1].is_ascii_digit())
+    })
 }
 
 /// In a hex literal, underscores may only sit between two hex digits.
@@ -98,7 +110,10 @@ pub fn check_underscores(s: &str) -> bool {
     let b = s.as_bytes();
     for (i, &c) in b.iter().enumerate() {
         if c == b'_' {
-            let ok = i > 0 && i + 1 < b.len() && b[i - 1].is_ascii_hexdigit() && b[i + 1].is_ascii_hexdigit();
+            let ok = i > 0
+                && i + 1 < b.len()
+                && b[i - 1].is_ascii_hexdigit()
+                && b[i + 1].is_ascii_hexdigit();
             if !ok {
                 return false;
             }
@@ -129,7 +144,10 @@ fn parse_hex_float(hex: &str, fmt: Format) -> Result<u64, FloatError> {
         Some(i) => (&mant[..i], &mant[i + 1..]),
         None => (mant, ""),
     };
-    if int_part.is_empty() || !check_underscores(int_part) || (!frac_part.is_empty() && !check_underscores(frac_part)) {
+    if int_part.is_empty()
+        || !check_underscores(int_part)
+        || (!frac_part.is_empty() && !check_underscores(frac_part))
+    {
         return Err(FloatError::Malformed);
     }
     // value = m * 2^e, with digits past 60 bits folded into `sticky`.
@@ -191,7 +209,11 @@ pub fn round_to_format(m: u64, e: i64, sticky: bool, fmt: Format) -> Result<u64,
         (0u64, false)
     } else {
         let kept = if shift == 64 { 0 } else { m >> shift };
-        let rem = if shift == 64 { m } else { m & ((1u64 << shift) - 1) };
+        let rem = if shift == 64 {
+            m
+        } else {
+            m & ((1u64 << shift) - 1)
+        };
         let half = 1u64 << (shift - 1);
         let up = rem > half || (rem == half && (sticky || kept & 1 == 1));
         (kept, up)
@@ -220,9 +242,17 @@ pub fn fmt_f32(bits: u32) -> String {
     if v.is_nan() {
         let sign = if bits >> 31 == 1 { "-" } else { "" };
         let payload = bits & 0x007f_ffff;
-        if payload == F32_QUIET { format!("{sign}nan") } else { format!("{sign}nan:0x{payload:x}") }
+        if payload == F32_QUIET {
+            format!("{sign}nan")
+        } else {
+            format!("{sign}nan:0x{payload:x}")
+        }
     } else if v.is_infinite() {
-        if v < 0.0 { "-inf".into() } else { "inf".into() }
+        if v < 0.0 {
+            "-inf".into()
+        } else {
+            "inf".into()
+        }
     } else {
         format!("{v:?}")
     }
@@ -233,9 +263,17 @@ pub fn fmt_f64(bits: u64) -> String {
     if v.is_nan() {
         let sign = if bits >> 63 == 1 { "-" } else { "" };
         let payload = bits & 0x000f_ffff_ffff_ffff;
-        if payload == F64_QUIET { format!("{sign}nan") } else { format!("{sign}nan:0x{payload:x}") }
+        if payload == F64_QUIET {
+            format!("{sign}nan")
+        } else {
+            format!("{sign}nan:0x{payload:x}")
+        }
     } else if v.is_infinite() {
-        if v < 0.0 { "-inf".into() } else { "inf".into() }
+        if v < 0.0 {
+            "-inf".into()
+        } else {
+            "inf".into()
+        }
     } else {
         format!("{v:?}")
     }
@@ -315,11 +353,19 @@ pub fn max64(a: u64, b: u64) -> u64 {
 /// Unary rounding ops keep NaN payloads but quiet them.
 pub fn unary32(bits: u32, f: impl Fn(f32) -> f32) -> u32 {
     let v = f32::from_bits(bits);
-    if v.is_nan() { bits | F32_QUIET } else { f(v).to_bits() }
+    if v.is_nan() {
+        bits | F32_QUIET
+    } else {
+        f(v).to_bits()
+    }
 }
 pub fn unary64(bits: u64, f: impl Fn(f64) -> f64) -> u64 {
     let v = f64::from_bits(bits);
-    if v.is_nan() { bits | F64_QUIET } else { f(v).to_bits() }
+    if v.is_nan() {
+        bits | F64_QUIET
+    } else {
+        f(v).to_bits()
+    }
 }
 
 /// Binary arithmetic with WebAssembly's NaN rule: a NaN operand propagates (quieted);
@@ -333,7 +379,11 @@ pub fn binary32(a: u32, b: u32, f: impl Fn(f32, f32) -> f32) -> u32 {
         return b | F32_QUIET;
     }
     let r = f(x, y);
-    if r.is_nan() { F32_CANON } else { r.to_bits() }
+    if r.is_nan() {
+        F32_CANON
+    } else {
+        r.to_bits()
+    }
 }
 pub fn binary64(a: u64, b: u64, f: impl Fn(f64, f64) -> f64) -> u64 {
     let (x, y) = (f64::from_bits(a), f64::from_bits(b));
@@ -344,7 +394,11 @@ pub fn binary64(a: u64, b: u64, f: impl Fn(f64, f64) -> f64) -> u64 {
         return b | F64_QUIET;
     }
     let r = f(x, y);
-    if r.is_nan() { F64_CANON } else { r.to_bits() }
+    if r.is_nan() {
+        F64_CANON
+    } else {
+        r.to_bits()
+    }
 }
 
 pub fn sqrt32(bits: u32) -> u32 {
@@ -353,7 +407,11 @@ pub fn sqrt32(bits: u32) -> u32 {
         bits | F32_QUIET
     } else {
         let r = v.sqrt();
-        if r.is_nan() { F32_CANON } else { r.to_bits() }
+        if r.is_nan() {
+            F32_CANON
+        } else {
+            r.to_bits()
+        }
     }
 }
 pub fn sqrt64(bits: u64) -> u64 {
@@ -362,7 +420,11 @@ pub fn sqrt64(bits: u64) -> u64 {
         bits | F64_QUIET
     } else {
         let r = v.sqrt();
-        if r.is_nan() { F64_CANON } else { r.to_bits() }
+        if r.is_nan() {
+            F64_CANON
+        } else {
+            r.to_bits()
+        }
     }
 }
 
@@ -403,7 +465,11 @@ fn trunc_checked(v: f64, lo_inclusive: f64, hi_exclusive: f64) -> Result<f64, Tr
         return Err(TruncError::Invalid);
     }
     let t = v.trunc();
-    if t >= lo_inclusive && t < hi_exclusive { Ok(t) } else { Err(TruncError::Overflow) }
+    if t >= lo_inclusive && t < hi_exclusive {
+        Ok(t)
+    } else {
+        Err(TruncError::Overflow)
+    }
 }
 
 pub fn trunc_i32_s(v: f64) -> Result<i32, TruncError> {
@@ -462,7 +528,10 @@ mod tests {
         assert_eq!(p32("0x1.00000100000000000001p0"), 0x3f80_0001); // just above the tie, far digits
         assert_eq!(p64("0x1p-1074"), 1);
         assert_eq!(p64("0x1.fffffffffffff8p-1023"), 0x0010_0000_0000_0000); // rounds up into the smallest normal
-        assert_eq!(p64("0x.8p1".replace(".8", "0.8").as_str()), 1.0f64.to_bits());
+        assert_eq!(
+            p64("0x.8p1".replace(".8", "0.8").as_str()),
+            1.0f64.to_bits()
+        );
     }
 
     #[test]

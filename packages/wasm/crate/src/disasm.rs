@@ -27,7 +27,11 @@ pub fn instr_text(m: &Module, func: &Func, i: &Instr) -> String {
     };
     let fname = |x: u32| {
         let imported = m.imported(ExternKind::Func) as u32;
-        match x.checked_sub(imported).and_then(|i| m.funcs.get(i as usize)).and_then(|f| f.name.as_deref()) {
+        match x
+            .checked_sub(imported)
+            .and_then(|i| m.funcs.get(i as usize))
+            .and_then(|f| f.name.as_deref())
+        {
             Some(n) => format!("${n}"),
             None => x.to_string(),
         }
@@ -35,7 +39,13 @@ pub fn instr_text(m: &Module, func: &Func, i: &Instr) -> String {
     match i {
         Block { ty, .. } | Loop { ty, .. } | If { ty, .. } => format!("{name}{}", block_suffix(ty)),
         Br(l) | BrIf(l) => format!("{name} {l}"),
-        BrTable(ls, d) => format!("{name} {} {d}", ls.iter().map(|l| l.to_string()).collect::<Vec<_>>().join(" ")),
+        BrTable(ls, d) => format!(
+            "{name} {} {d}",
+            ls.iter()
+                .map(|l| l.to_string())
+                .collect::<Vec<_>>()
+                .join(" ")
+        ),
         Call(f) => format!("{name} {}", fname(*f)),
         CallIndirect(t) => format!("{name} (type {t})"),
         LocalGet(x) | LocalSet(x) | LocalTee(x) => format!("{name} {}", local(*x)),
@@ -73,8 +83,14 @@ pub fn func_lines(m: &Module, func: &Func) -> Vec<Line> {
             Instr::Else { .. } => depth.saturating_sub(1),
             _ => depth,
         };
-        out.push(Line { depth: if is_last { 0 } else { d }, text: instr_text(m, func, i) });
-        if matches!(i, Instr::Block { .. } | Instr::Loop { .. } | Instr::If { .. }) {
+        out.push(Line {
+            depth: if is_last { 0 } else { d },
+            text: instr_text(m, func, i),
+        });
+        if matches!(
+            i,
+            Instr::Block { .. } | Instr::Loop { .. } | Instr::If { .. }
+        ) {
             depth += 1;
         }
     }
@@ -88,9 +104,18 @@ mod tests {
 
     #[test]
     fn indents_blocks_and_names_locals() {
-        let m = parse_module_text("(module (func $f (param $n i32) (result i32) (block (result i32) (local.get $n))))").unwrap();
+        let m = parse_module_text(
+            "(module (func $f (param $n i32) (result i32) (block (result i32) (local.get $n))))",
+        )
+        .unwrap();
         let lines = func_lines(&m, &m.funcs[0]);
-        let text: Vec<String> = lines.iter().map(|l| format!("{}{}", "  ".repeat(l.depth), l.text)).collect();
-        assert_eq!(text, vec!["block (result i32)", "  local.get $n", "end", "end"]);
+        let text: Vec<String> = lines
+            .iter()
+            .map(|l| format!("{}{}", "  ".repeat(l.depth), l.text))
+            .collect();
+        assert_eq!(
+            text,
+            vec!["block (result i32)", "  local.get $n", "end", "end"]
+        );
     }
 }

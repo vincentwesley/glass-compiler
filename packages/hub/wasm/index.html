@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; manifest-src 'self'; worker-src 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="author" content="Vin, Vin's Atelier" />
+    <link rel="author" href="/humans.txt" />
+    <meta name="theme-color" content="#11150e" />
+    <title>Glass Wasm · the Glass series</title>
+    <meta name="description" content="Glass Wasm, part of the Glass series: a WebAssembly virtual machine written from scratch in Rust, with a debugger you can see through, graded by the official spec testsuite." />
+    <link rel="canonical" href="https://vincentwesley.github.io/glass-compiler/series/wasm/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Glass Wasm · the Glass series" />
+    <meta property="og:description" content="Glass Wasm, part of the Glass series: a WebAssembly virtual machine written from scratch in Rust, with a debugger you can see through, graded by the official spec testsuite." />
+    <meta property="og:url" content="https://vincentwesley.github.io/glass-compiler/series/wasm/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script src="/theme-init.js"></script>
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body class="hub-page">
+    <a class="skip-link" href="#main">Skip to the content</a>
+    <header class="masthead">
+      <div class="brand">
+        <!-- glass:mark -->
+        <div>
+          <p class="title"><a class="title-link" href="/glass-compiler/series/">Glass</a></p>
+          <p class="tagline">Computers you can see through.</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="theme-toggle" type="button" class="btn" aria-pressed="false">
+          <span class="theme-icon" aria-hidden="true"></span><span class="theme-text">Light theme</span>
+        </button>
+      </div>
+    </header>
+
+    <main id="main" class="hub hub-member" tabindex="-1">
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/glass-compiler/series/">The Glass series</a></li>
+          <li><span aria-current="page">Glass Wasm</span></li>
+        </ol>
+      </nav>
+
+      <section class="hub-intro" aria-labelledby="h-member">
+        <p class="pixel-label">02 · Live</p>
+        <h1 id="h-member" class="hub-lead">Glass Wasm</h1>
+        <p>
+          A WebAssembly machine written from scratch in Rust, then compiled to WebAssembly itself so it runs in your
+          browser. Load a module, call a function and step through it: the value stack, the call frames and their
+          locals, the open blocks and the bytes of linear memory are all on show.
+        </p>
+        <p class="member-actions">
+          <a class="btn btn-primary" href="/glass-compiler/wasm/">Open Glass Wasm</a>
+          <a class="btn" href="https://github.com/vincentwesley/glass-compiler/tree/main/packages/wasm">Source and README</a>
+        </p>
+      </section>
+
+      <figure class="shot card">
+        <img
+          src="../../../docs/screenshots/wasm-desktop-dark.png"
+          alt="Glass Wasm on a desktop: a recursive factorial four calls deep, with the value stack, the frames and their locals, and i64.mul selected in the code"
+          width="1440"
+          height="900"
+          loading="lazy"
+          decoding="async"
+        />
+      </figure>
+
+      <section class="hub-section" aria-labelledby="h-do">
+        <h2 id="h-do"><span class="pixel-label">01</span> What you can do</h2>
+        <ul class="how-list">
+          <li><strong>Write WebAssembly by hand.</strong> The text format is parsed, validated and instantiated as you type, with errors that point at the line.</li>
+          <li><strong>Step the machine.</strong> Forwards, backwards, play or scrub; every step replays exactly, so you can go back as far as you like.</li>
+          <li><strong>Watch memory.</strong> Linear memory byte by byte, following each load and store as it happens.</li>
+          <li><strong>Click an instruction.</strong> See the line of your module it came from, and every step on the timeline that runs it.</li>
+          <li><strong>Run the official tests yourself.</strong> One button runs the whole WebAssembly 1.0 testsuite through the same machine, in your browser.</li>
+        </ul>
+      </section>
+
+      <section class="hub-section" aria-labelledby="h-grade">
+        <h2 id="h-grade"><span class="pixel-label">02</span> How it's graded</h2>
+        <p class="hub-sub">
+          By the WebAssembly working group's own testsuite (tag <code>wg-1.0</code>): every module, call and rejection in
+          all 73 core <code>.wast</code> files. Recorded from the command-line run by <code>scripts/record-results.mjs</code>.
+        </p>
+        <!-- hub:grade member="wasm" -->
+        <p class="small muted">
+          Malformed, invalid and unlinkable modules must be rejected at the right stage; traps must match the expected
+          message. The same counts are reproduced live on the Glass Wasm page.
+        </p>
+      </section>
+
+      <section class="hub-section" aria-labelledby="h-next">
+        <h2 id="h-next"><span class="pixel-label">03</span> Where it goes next</h2>
+        <p>
+          Glass Compiler gains a WebAssembly backend, so a Pane program can be compiled to a real module and stepped
+          through here, with each instruction linked back to the Pane code it came from. Later, Small C programs run
+          here too, and a JIT compiles hot functions to x86-64 in the command-line build.
+        </p>
+      </section>
+    </main>
+
+    <footer class="credits">
+      <p>
+        <span class="pixel-label">The Glass series</span> · made by Vin, Vin's Atelier · MIT licence ·
+        <a href="https://github.com/vincentwesley/glass-compiler">source on GitHub</a> · fonts under the
+        <a href="../licenses/FONTS-OFL.txt">SIL Open Font License</a>
+      </p>
+      <!-- glass:credits project="Glass Wasm" -->
+    </footer>
+  </body>
+</html>

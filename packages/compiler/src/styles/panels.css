@@ -55,24 +55,6 @@
   .editor { height: 300px; flex: none; }
 }
 
-.share-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  margin-top: 10px;
-}
-
-.share-field input {
-  width: 100%;
-  margin-top: 6px;
-  padding: 4px 6px;
-  border: 1px solid var(--line-strong);
-  background: var(--bg-deep);
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-
 .diagnostics {
   flex: none;
   margin: 8px 0 0;

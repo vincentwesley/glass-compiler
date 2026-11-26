@@ -1,0 +1,90 @@
+name: CI · Glass Wasm
+
+# Runs only when this package, something it depends on, or the toolchain changes
+# (docs/DECISIONS.md S7). Everything here is also verified locally before a push.
+on:
+  pull_request:
+    paths:
+      - 'packages/wasm/**'
+      - 'packages/glass-ui/**'
+      - 'scripts/record-results.mjs'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.gitmodules'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.base.json'
+      - 'eslint.config.js'
+      - '.nvmrc'
+      - '.github/workflows/ci-wasm.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'packages/wasm/**'
+      - 'packages/glass-ui/**'
+      - 'scripts/record-results.mjs'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.gitmodules'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.base.json'
+      - 'eslint.config.js'
+      - '.nvmrc'
+      - '.github/workflows/ci-wasm.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-wasm-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Glass Wasm
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: true
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Rust toolchain (pinned in rust-toolchain.toml)
+        run: rustup toolchain install
+
+      - name: Rust format and lints
+        run: |
+          cargo fmt --check -p glass-wasm
+          cargo clippy -p glass-wasm --all-targets -- -D warnings
+
+      - name: Rust unit tests
+        run: cargo test -p glass-wasm
+
+      - name: Spec testsuite (WebAssembly 1.0) and recorded results are current
+        run: node scripts/record-results.mjs wasm --check
+
+      - name: Lint
+        run: npx eslint packages/wasm
+
+      - name: Typecheck
+        run: npm run typecheck -w @glass/wasm
+
+      - name: Unit tests (the VM built for the browser)
+        run: npm test -w @glass/wasm
+
+      - name: Build
+        run: npm run build -w @glass/wasm

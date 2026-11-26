@@ -44,7 +44,13 @@ fn main() -> ExitCode {
             let r = Runner::new().run_script(&src);
             let name = f.file_name().unwrap().to_string_lossy().into_owned();
             if !json_out {
-                println!("{:<32} {:>5} / {:<5} {}", name, r.passed, r.total(), if r.failed == 0 { "ok" } else { "FAIL" });
+                println!(
+                    "{:<32} {:>5} / {:<5} {}",
+                    name,
+                    r.passed,
+                    r.total(),
+                    if r.failed == 0 { "ok" } else { "FAIL" }
+                );
                 if verbose {
                     for x in r.failures.iter().take(20) {
                         println!("    line {:>5} {}: {}", x.line, x.command, x.message);
@@ -64,14 +70,38 @@ fn main() -> ExitCode {
                 let fails: Vec<String> = r
                     .failures
                     .iter()
-                    .map(|f| format!("{{\"line\":{},\"command\":{},\"message\":{}}}", f.line, json::string(&f.command), json::string(&f.message)))
+                    .map(|f| {
+                        format!(
+                            "{{\"line\":{},\"command\":{},\"message\":{}}}",
+                            f.line,
+                            json::string(&f.command),
+                            json::string(&f.message)
+                        )
+                    })
                     .collect();
-                format!("{{\"file\":{},\"passed\":{},\"failed\":{},\"failures\":[{}]}}", json::string(n), r.passed, r.failed, fails.join(","))
+                format!(
+                    "{{\"file\":{},\"passed\":{},\"failed\":{},\"failures\":[{}]}}",
+                    json::string(n),
+                    r.passed,
+                    r.failed,
+                    fails.join(",")
+                )
             })
             .collect();
-        println!("{{\"passed\":{passed},\"total\":{total},\"files\":[{}]}}", files.join(","));
+        println!(
+            "{{\"passed\":{passed},\"total\":{total},\"files\":[{}]}}",
+            files.join(",")
+        );
     } else {
-        println!("\n{passed} / {total} commands pass; {clean} / {} files fully pass", results.len());
+        println!(
+            "\n{passed} / {total} commands pass; {clean} / {} files fully pass",
+            results.len()
+        );
     }
-    if passed == total { ExitCode::SUCCESS } else { ExitCode::FAILURE }
+    // With --json the numbers are the output, failures included; the exit status is for humans and CI.
+    if json_out || passed == total {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    }
 }

@@ -17,16 +17,28 @@ fn trunc_err(e: TruncError) -> Trap {
 
 macro_rules! pop {
     ($s:expr, I32) => {
-        match $s.pop() { Some(I32(v)) => v, _ => unreachable!() }
+        match $s.pop() {
+            Some(I32(v)) => v,
+            _ => unreachable!(),
+        }
     };
     ($s:expr, I64) => {
-        match $s.pop() { Some(I64(v)) => v, _ => unreachable!() }
+        match $s.pop() {
+            Some(I64(v)) => v,
+            _ => unreachable!(),
+        }
     };
     ($s:expr, F32) => {
-        match $s.pop() { Some(F32(v)) => v, _ => unreachable!() }
+        match $s.pop() {
+            Some(F32(v)) => v,
+            _ => unreachable!(),
+        }
     };
     ($s:expr, F64) => {
-        match $s.pop() { Some(F64(v)) => v, _ => unreachable!() }
+        match $s.pop() {
+            Some(F64(v)) => v,
+            _ => unreachable!(),
+        }
     };
 }
 

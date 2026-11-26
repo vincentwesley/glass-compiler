@@ -26,12 +26,26 @@ node, the `ADD` instruction and every VM step that ran it all light up together.
 More in [packages/compiler/README.md](packages/compiler/README.md): the Pane
 language, keyboard use, and how it is built.
 
+## Glass Wasm (live)
+
+**Try it:** https://vincentwesley.github.io/glass-compiler/wasm/
+
+A WebAssembly 1.0 virtual machine written from scratch in Rust, then compiled
+to WebAssembly so its debugger runs in your browser. Step through a module and
+watch the value stack, frames and locals, open blocks and linear memory. It is
+graded by the official WebAssembly testsuite: **19,270 of 19,270 commands pass
+in all 73 core files**, and one button runs them again in your browser.
+
+![Glass Wasm stepping through a recursive factorial, four frames deep](docs/screenshots/wasm-desktop-dark.png)
+
+More in [packages/wasm/README.md](packages/wasm/README.md).
+
 ## The series
 
 | # | Project | What it is | Graded by | Status |
 | --- | --- | --- | --- | --- |
 | 1 | [Glass Compiler](packages/compiler) | Pane through tokens, syntax tree, bytecode and a stack VM, every stage linked | Unit tests, browser checks with axe | **Live** |
-| 2 | Glass Wasm | A WebAssembly VM from scratch in Rust, with a debugger for the value stack, locals, linear memory and frames | The official WebAssembly spec testsuite | Planned (M2) |
+| 2 | [Glass Wasm](packages/wasm) | A WebAssembly VM from scratch in Rust, with a debugger for the value stack, locals, linear memory and frames | The official WebAssembly spec testsuite: 19,270 / 19,270 | **Live** |
 | 3 | Small C | A C-subset compiler to WebAssembly in the spirit of chibicc, running in Glass Wasm | c-testsuite | Planned (M4) |
 | 4 | Glass Console | CHIP-8, then a Game Boy, with registers, tiles, sprites and the sound channels on show | CHIP-8, Blargg and Mooneye test ROMs | Planned (M5) |
 | 5 | Glass Kernel | A tiny teaching OS on a simulated RISC-V machine | Known-answer system-call tests | Planned (M6) |
@@ -46,6 +60,7 @@ debugger and later boots on Glass Kernel. The order, and why, is in
 ```
 packages/glass-ui   the shared debugger kit: step controls, timeline, panels, highlighting, theme, credits
 packages/compiler   Glass Compiler
+packages/wasm       Glass Wasm: crate/ (Rust VM), spec/ (testsuite submodule), the debugger page
 packages/hub        the series site (/glass-compiler/series/)
 site.config.mjs     every page's path and status
 scripts/            site assembly, site checks, recorded test results
@@ -62,9 +77,11 @@ Security Policy blocks inline scripts and third-party hosts. See
 
 ## Running it yourself
 
-You need Node 24 (see `.nvmrc`).
+You need Node 24 (see `.nvmrc`) and Rust (pinned in `rust-toolchain.toml`,
+installed by rustup on first use).
 
 ```sh
+git submodule update --init --depth 1   # the WebAssembly testsuite
 npm ci --ignore-scripts
 npm run dev          # Glass Compiler at http://localhost:5173/glass-compiler/
 npm run verify       # typecheck, lint, unit tests and build for every package

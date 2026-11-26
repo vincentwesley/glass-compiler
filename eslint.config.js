@@ -3,7 +3,7 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['vendor/', '.claude/', '**/dist/', '_site/', '**/node_modules/', '**/coverage/', '**/test-results/', '**/playwright-report/', '**/target/', '**/pkg/'] },
+  { ignores: ['vendor/', '.claude/', 'packages/wasm/spec/', 'packages/wasm/generated/', '**/dist/', '_site/', '**/node_modules/', '**/coverage/', '**/test-results/', '**/playwright-report/', '**/target/', '**/pkg/'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

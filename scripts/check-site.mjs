@@ -35,7 +35,9 @@ for (const file of files(root)) {
   if (!csp) problems.push(`${rel}: no CSP meta tag`);
   else {
     for (const d of CSP_REQUIRED) if (!csp.includes(d)) problems.push(`${rel}: CSP lacks ${d}`);
-    if (/unsafe-inline|unsafe-eval'|https?:/.test(csp)) problems.push(`${rel}: CSP allows inline code, eval or another host`);
+    // 'wasm-unsafe-eval' (compile WebAssembly, nothing else) is allowed; JavaScript eval is not.
+    if (/'unsafe-inline'|'unsafe-eval'|https?:/.test(csp)) problems.push(`${rel}: CSP allows inline code, eval or another host`);
+    if (csp.includes("'wasm-unsafe-eval'") && !rel.startsWith(`${SITE.base}wasm/`)) problems.push(`${rel}: only Wasm pages may allow 'wasm-unsafe-eval'`);
   }
   if (/<script(?![^>]*\bsrc=)(?![^>]*type="application\/ld\+json")[^>]*>/.test(html)) problems.push(`${rel}: inline <script>`);
   if (/\sstyle="/.test(html)) problems.push(`${rel}: inline style attribute`);

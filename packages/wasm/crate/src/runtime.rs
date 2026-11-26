@@ -34,8 +34,17 @@ pub enum InstantiateError {
 pub type HostFn = Rc<dyn Fn(&mut Store, &[Value]) -> Result<Vec<Value>, Trap>>;
 
 pub enum FuncInst {
-    Wasm { ty: FuncType, module: Rc<ModuleInst>, code: Rc<Func>, index: u32 },
-    Host { ty: FuncType, name: String, f: HostFn },
+    Wasm {
+        ty: FuncType,
+        module: Rc<ModuleInst>,
+        code: Rc<Func>,
+        index: u32,
+    },
+    Host {
+        ty: FuncType,
+        name: String,
+        f: HostFn,
+    },
 }
 
 impl FuncInst {
@@ -106,35 +115,75 @@ pub struct Store {
     pub output: Vec<String>,
 }
 
+/// `pages` of zeroed memory, or None if it doesn't fit in this machine's address space.
+fn zeroed_bytes(pages: u32) -> Option<Vec<u8>> {
+    let bytes = usize::try_from(pages as u64 * PAGE as u64).ok()?;
+    let mut v = Vec::new();
+    v.try_reserve_exact(bytes).ok()?;
+    v.resize(bytes, 0);
+    Some(v)
+}
+
+/// Grows memory to `pages`; false (and nothing changes) when the host can't provide it.
+fn grow_to(data: &mut Vec<u8>, pages: u32) -> bool {
+    let Ok(bytes) = usize::try_from(pages as u64 * PAGE as u64) else {
+        return false;
+    };
+    if data
+        .try_reserve_exact(bytes.saturating_sub(data.len()))
+        .is_err()
+    {
+        return false;
+    }
+    data.resize(bytes, 0);
+    true
+}
+
 fn table_fits(have: &TableInst, want: Limits) -> bool {
     let len = have.elems.len() as u32;
-    len >= want.min && match want.max {
-        None => true,
-        Some(wmax) => have.max.is_some_and(|m| m <= wmax),
-    }
+    len >= want.min
+        && match want.max {
+            None => true,
+            Some(wmax) => have.max.is_some_and(|m| m <= wmax),
+        }
 }
 
 fn memory_fits(have: &MemInst, want: Limits) -> bool {
-    have.pages() >= want.min && match want.max {
-        None => true,
-        Some(wmax) => have.max.is_some_and(|m| m <= wmax),
-    }
+    have.pages() >= want.min
+        && match want.max {
+            None => true,
+            Some(wmax) => have.max.is_some_and(|m| m <= wmax),
+        }
 }
 
 impl Store {
     pub fn add_host_func(&mut self, name: &str, ty: FuncType, f: HostFn) -> u32 {
-        self.funcs.push(FuncInst::Host { ty, name: name.to_string(), f });
+        self.funcs.push(FuncInst::Host {
+            ty,
+            name: name.to_string(),
+            f,
+        });
         self.funcs.len() as u32 - 1
     }
 
     pub fn add_table(&mut self, limits: Limits) -> u32 {
-        self.tables.push(TableInst { elems: vec![None; limits.min as usize], max: limits.max });
+        self.tables.push(TableInst {
+            elems: vec![None; limits.min as usize],
+            max: limits.max,
+        });
         self.tables.len() as u32 - 1
     }
 
-    pub fn add_memory(&mut self, limits: Limits) -> u32 {
-        self.memories.push(MemInst { data: vec![0; limits.min as usize * PAGE], max: limits.max });
-        self.memories.len() as u32 - 1
+    /// Allocates a memory. Fails (rather than aborting) when this machine can't
+    /// hold it: 65,536 pages is 4 GiB, more than a 32-bit browser build can address.
+    pub fn add_memory(&mut self, limits: Limits) -> Result<u32, Trap> {
+        let data = zeroed_bytes(limits.min)
+            .ok_or_else(|| Trap::new("out of memory: can't allocate the initial memory"))?;
+        self.memories.push(MemInst {
+            data,
+            max: limits.max,
+        });
+        Ok(self.memories.len() as u32 - 1)
     }
 
     pub fn add_global(&mut self, ty: GlobalType, value: Value) -> u32 {
@@ -144,7 +193,11 @@ impl Store {
 
     /// Instantiates a validated module against `imports` (one per import, in order)
     /// and runs its start function.
-    pub fn instantiate(&mut self, m: &Module, imports: &[ExternVal]) -> Result<Rc<ModuleInst>, InstantiateError> {
+    pub fn instantiate(
+        &mut self,
+        m: &Module,
+        imports: &[ExternVal],
+    ) -> Result<Rc<ModuleInst>, InstantiateError> {
         if imports.len() != m.imports.len() {
             return Err(InstantiateError::Unlinkable("unknown import".into()));
         }
@@ -156,7 +209,11 @@ impl Store {
             globals: Vec::new(),
             exports: HashMap::new(),
         };
-        let bad = |what: &str| Err(InstantiateError::Unlinkable(format!("incompatible import type: {what}")));
+        let bad = |what: &str| {
+            Err(InstantiateError::Unlinkable(format!(
+                "incompatible import type: {what}"
+            )))
+        };
         for (imp, ext) in m.imports.iter().zip(imports) {
             match (&imp.desc, *ext) {
                 (ImportDesc::Func(t), ExternVal::Func(a)) => {
@@ -196,7 +253,8 @@ impl Store {
             inst.tables.push(self.add_table(*t));
         }
         for l in &m.memories {
-            inst.memories.push(self.add_memory(*l));
+            inst.memories
+                .push(self.add_memory(*l).map_err(InstantiateError::Trap)?);
         }
         for g in &m.globals {
             let v = self.eval_const(&inst, &g.init);
@@ -228,16 +286,22 @@ impl Store {
             let Value::I32(off) = off else { unreachable!() };
             let table = &self.tables[inst.tables[e.table as usize] as usize];
             if off as u32 as u64 + e.init.len() as u64 > table.elems.len() as u64 {
-                return Err(InstantiateError::Unlinkable("elements segment does not fit".into()));
+                return Err(InstantiateError::Unlinkable(
+                    "elements segment does not fit".into(),
+                ));
             }
             elem_at.push(off as u32 as usize);
         }
         let mut data_at = Vec::new();
         for d in &m.datas {
-            let Value::I32(off) = self.eval_const(&inst, &d.offset) else { unreachable!() };
+            let Value::I32(off) = self.eval_const(&inst, &d.offset) else {
+                unreachable!()
+            };
             let mem = &self.memories[inst.memories[d.memory as usize] as usize];
             if off as u32 as u64 + d.bytes.len() as u64 > mem.data.len() as u64 {
-                return Err(InstantiateError::Unlinkable("data segment does not fit".into()));
+                return Err(InstantiateError::Unlinkable(
+                    "data segment does not fit".into(),
+                ));
             }
             data_at.push(off as u32 as usize);
         }
@@ -252,7 +316,8 @@ impl Store {
             mem.data[at..at + d.bytes.len()].copy_from_slice(&d.bytes);
         }
         if let Some(s) = m.start {
-            self.invoke(inst.funcs[s as usize], &[]).map_err(InstantiateError::Trap)?;
+            self.invoke(inst.funcs[s as usize], &[])
+                .map_err(InstantiateError::Trap)?;
         }
         Ok(inst)
     }
@@ -289,6 +354,8 @@ pub struct Label {
     pub is_loop: bool,
     /// Value-stack height when the label was entered.
     pub height: usize,
+    /// The pc of the block, loop or if that opened it (for the debugger).
+    pub start: usize,
 }
 
 #[derive(Clone)]
@@ -352,7 +419,12 @@ impl Thread {
                 self.stack.extend(out);
                 Ok(())
             }
-            FuncInst::Wasm { ty, module, code, index } => {
+            FuncInst::Wasm {
+                ty,
+                module,
+                code,
+                index,
+            } => {
                 if self.frames.len() >= MAX_FRAMES {
                     return Err(Trap::new("call stack exhausted"));
                 }
@@ -402,7 +474,11 @@ impl Thread {
         self.labels.truncate(idx);
         let frame = self.frames.last_mut().unwrap();
         // Loops are re-entered (their label is pushed again); blocks continue after their end.
-        frame.pc = if label.is_loop { label.target } else { label.target + 1 };
+        frame.pc = if label.is_loop {
+            label.target
+        } else {
+            label.target + 1
+        };
     }
 
     fn pop(&mut self) -> Value {
@@ -429,11 +505,29 @@ impl Thread {
         match ins {
             Unreachable => return Err(Trap::new("unreachable")),
             Nop => {}
-            Block { ty, end } => self.labels.push(Label { arity: ty.results().len(), target: *end as usize, is_loop: false, height: self.stack.len() }),
-            Loop { .. } => self.labels.push(Label { arity: 0, target: pc, is_loop: true, height: self.stack.len() }),
+            Block { ty, end } => self.labels.push(Label {
+                arity: ty.results().len(),
+                target: *end as usize,
+                is_loop: false,
+                height: self.stack.len(),
+                start: pc,
+            }),
+            Loop { .. } => self.labels.push(Label {
+                arity: 0,
+                target: pc,
+                is_loop: true,
+                height: self.stack.len(),
+                start: pc,
+            }),
             If { ty, else_, end } => {
                 let c = self.pop_i32();
-                let label = Label { arity: ty.results().len(), target: *end as usize, is_loop: false, height: self.stack.len() };
+                let label = Label {
+                    arity: ty.results().len(),
+                    target: *end as usize,
+                    is_loop: false,
+                    height: self.stack.len(),
+                    start: pc,
+                };
                 if c != 0 {
                     self.labels.push(label);
                 } else if else_ != end {
@@ -471,8 +565,12 @@ impl Thread {
             CallIndirect(t) => {
                 let i = self.pop_i32() as u32 as usize;
                 let table = &store.tables[module.tables[0] as usize];
-                let Some(slot) = table.elems.get(i) else { return Err(Trap::new("undefined element")) };
-                let Some(f) = *slot else { return Err(Trap::new(&format!("uninitialized element {i}"))) };
+                let Some(slot) = table.elems.get(i) else {
+                    return Err(Trap::new("undefined element"));
+                };
+                let Some(f) = *slot else {
+                    return Err(Trap::new(&format!("uninitialized element {i}")));
+                };
                 if *store.funcs[f as usize].ty() != module.types[*t as usize] {
                     return Err(Trap::new("indirect call type mismatch"));
                 }
@@ -499,14 +597,20 @@ impl Thread {
                 let v = *self.stack.last().unwrap();
                 self.frames.last_mut().unwrap().locals[*x as usize] = v;
             }
-            GlobalGet(x) => self.stack.push(store.globals[module.globals[*x as usize] as usize].value),
+            GlobalGet(x) => self
+                .stack
+                .push(store.globals[module.globals[*x as usize] as usize].value),
             GlobalSet(x) => {
                 let v = self.pop();
                 store.globals[module.globals[*x as usize] as usize].value = v;
             }
             Instr::Load(op, arg) => {
                 let addr = self.pop_i32();
-                self.last_mem = Some((addr as u32 as u64 + arg.offset as u64, crate::opcodes::mem_op(*op).unwrap().bytes, false));
+                self.last_mem = Some((
+                    addr as u32 as u64 + arg.offset as u64,
+                    crate::opcodes::mem_op(*op).unwrap().bytes,
+                    false,
+                ));
                 let mem = &store.memories[module.memories[0] as usize];
                 let v = load(&mem.data, *op, addr, arg.offset)?;
                 self.stack.push(v);
@@ -514,7 +618,11 @@ impl Thread {
             Instr::Store(op, arg) => {
                 let v = self.pop();
                 let addr = self.pop_i32();
-                self.last_mem = Some((addr as u32 as u64 + arg.offset as u64, crate::opcodes::mem_op(*op).unwrap().bytes, true));
+                self.last_mem = Some((
+                    addr as u32 as u64 + arg.offset as u64,
+                    crate::opcodes::mem_op(*op).unwrap().bytes,
+                    true,
+                ));
                 let mem = &mut store.memories[module.memories[0] as usize];
                 store_mem(&mut mem.data, *op, addr, arg.offset, v)?;
             }
@@ -528,10 +636,8 @@ impl Thread {
                 let old = mem.pages();
                 let limit = mem.max.unwrap_or(MAX_PAGES).min(MAX_PAGES);
                 let r = match old.checked_add(delta) {
-                    Some(new) if new <= limit => {
-                        mem.data.resize(new as usize * PAGE, 0);
-                        old as i32
-                    }
+                    // A grow the host can't satisfy fails like one past the limit.
+                    Some(new) if new <= limit && grow_to(&mut mem.data, new) => old as i32,
                     _ => -1,
                 };
                 self.stack.push(Value::I32(r));

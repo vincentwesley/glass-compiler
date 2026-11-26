@@ -18,12 +18,18 @@ pub struct ParseError {
 type Result<T> = std::result::Result<T, ParseError>;
 
 fn fail<T>(message: impl Into<String>, at: &Sexp) -> Result<T> {
-    Err(ParseError { message: message.into(), offset: at.offset() })
+    Err(ParseError {
+        message: message.into(),
+        offset: at.offset(),
+    })
 }
 
 /// Parses a whole text: either one `(module …)` or bare module fields.
 pub fn parse_module_text(src: &str) -> Result<Module> {
-    let sexps = parse_sexps(src).map_err(|e| ParseError { message: e.message, offset: e.offset })?;
+    let sexps = parse_sexps(src).map_err(|e| ParseError {
+        message: e.message,
+        offset: e.offset,
+    })?;
     if sexps.len() == 1 && sexps[0].is_form("module") {
         let items = sexps[0].list().unwrap();
         let mut rest = &items[1..];
@@ -42,7 +48,11 @@ fn digits_value(text: &str) -> Option<u64> {
         Some(h) => (16, h),
         None => (10, text),
     };
-    let ok = if radix == 16 { float::check_underscores(digits) } else { float::check_underscores_dec(digits) };
+    let ok = if radix == 16 {
+        float::check_underscores(digits)
+    } else {
+        float::check_underscores_dec(digits)
+    };
     if digits.is_empty() || !ok {
         return None;
     }
@@ -78,11 +88,25 @@ pub fn parse_int(text: &str, bits: u32) -> std::result::Result<u64, &'static str
             Some(h) => (16, h),
             None => (10, body),
         };
-        let underscores_ok = if radix == 16 { float::check_underscores(digits) } else { float::check_underscores_dec(digits) };
-        let well_formed = !digits.is_empty() && underscores_ok && digits.chars().all(|c| c == '_' || c.is_digit(radix));
-        return Err(if well_formed { "constant out of range" } else { "unknown operator" });
+        let underscores_ok = if radix == 16 {
+            float::check_underscores(digits)
+        } else {
+            float::check_underscores_dec(digits)
+        };
+        let well_formed = !digits.is_empty()
+            && underscores_ok
+            && digits.chars().all(|c| c == '_' || c.is_digit(radix));
+        return Err(if well_formed {
+            "constant out of range"
+        } else {
+            "unknown operator"
+        });
     };
-    let mask = if bits == 64 { u64::MAX } else { (1u64 << bits) - 1 };
+    let mask = if bits == 64 {
+        u64::MAX
+    } else {
+        (1u64 << bits) - 1
+    };
     if neg {
         let min_mag = 1u64 << (bits - 1);
         if v > min_mag {
@@ -98,9 +122,13 @@ pub fn parse_int(text: &str, bits: u32) -> std::result::Result<u64, &'static str
 }
 
 fn parse_float_lit(s: &Sexp, fmt: float::Format) -> Result<u64> {
-    let Some(text) = s.atom() else { return fail("unexpected token", s) };
+    let Some(text) = s.atom() else {
+        return fail("unexpected token", s);
+    };
     let first = text.trim_start_matches(['+', '-']);
-    let ok_start = first.starts_with(|c: char| c.is_ascii_digit()) || first.starts_with("inf") || first.starts_with("nan");
+    let ok_start = first.starts_with(|c: char| c.is_ascii_digit())
+        || first.starts_with("inf")
+        || first.starts_with("nan");
     if !ok_start {
         return fail("unexpected token", s);
     }
@@ -206,7 +234,12 @@ struct TypeUse {
 /// Reads `(type x)? (param …)* (result …)*` from the front of `items`; returns how many items it used.
 fn parse_typeuse(items: &[Sexp], ctx: &Ctx, allow_names: bool) -> Result<(TypeUse, usize)> {
     let mut i = 0;
-    let mut tu = TypeUse { index: None, params: Vec::new(), results: Vec::new(), inline: false };
+    let mut tu = TypeUse {
+        index: None,
+        params: Vec::new(),
+        results: Vec::new(),
+        inline: false,
+    };
     if let Some(s) = items.first().filter(|s| s.is_form("type")) {
         let l = s.list().unwrap();
         if l.len() != 2 {
@@ -245,7 +278,10 @@ fn parse_typeuse(items: &[Sexp], ctx: &Ctx, allow_names: bool) -> Result<(TypeUs
 
 /// Turns a typeuse into a type index, appending an implicit type when needed.
 fn resolve_typeuse(tu: &TypeUse, types: &mut Vec<FuncType>, at: &Sexp) -> Result<u32> {
-    let inline = FuncType { params: tu.params.iter().map(|p| p.1).collect(), results: tu.results.clone() };
+    let inline = FuncType {
+        params: tu.params.iter().map(|p| p.1).collect(),
+        results: tu.results.clone(),
+    };
     match tu.index {
         Some(idx) => {
             if tu.inline {
@@ -269,7 +305,10 @@ fn resolve_typeuse(tu: &TypeUse, types: &mut Vec<FuncType>, at: &Sexp) -> Result
 }
 
 /// Splits off leading `(export "…")` forms and an optional `(import "m" "n")`.
-fn inline_exports_imports<'a>(items: &'a [Sexp]) -> Result<(Vec<String>, Option<(String, String)>, &'a [Sexp])> {
+/// Inline `(export …)` names, an inline `(import "m" "n")`, and the items after them.
+type Inline<'a> = (Vec<String>, Option<(String, String)>, &'a [Sexp]);
+
+fn inline_exports_imports(items: &[Sexp]) -> Result<Inline<'_>> {
     let mut i = 0;
     let mut exports = Vec::new();
     let mut import = None;
@@ -306,8 +345,14 @@ fn limits(items: &[Sexp], at: &Sexp) -> Result<Limits> {
         }
     };
     match items {
-        [min] => Ok(Limits { min: nat(min)?, max: None }),
-        [min, max] => Ok(Limits { min: nat(min)?, max: Some(nat(max)?) }),
+        [min] => Ok(Limits {
+            min: nat(min)?,
+            max: None,
+        }),
+        [min, max] => Ok(Limits {
+            min: nat(min)?,
+            max: Some(nat(max)?),
+        }),
         _ => fail("unexpected token", at),
     }
 }
@@ -318,9 +363,15 @@ fn global_type(s: &Sexp) -> Result<GlobalType> {
         if l.len() != 2 {
             return fail("unexpected token", s);
         }
-        Ok(GlobalType { ty: valtype(&l[1])?, mutable: true })
+        Ok(GlobalType {
+            ty: valtype(&l[1])?,
+            mutable: true,
+        })
     } else {
-        Ok(GlobalType { ty: valtype(s)?, mutable: false })
+        Ok(GlobalType {
+            ty: valtype(s)?,
+            mutable: false,
+        })
     }
 }
 
@@ -344,13 +395,22 @@ pub fn parse_module_fields(fields: &[Sexp]) -> Result<Module> {
     // Pass 1: explicit types, and every index space's names, in order.
     let mut defined = [false; 4]; // a non-import definition of each kind seen
     for f in fields {
-        let Some(head) = f.head() else { return fail("unexpected token", f) };
+        let Some(head) = f.head() else {
+            return fail("unexpected token", f);
+        };
         let items = &f.list().unwrap()[1..];
         let (id, rest) = field_id(items);
         let mut note = |kind: Kind, is_import: bool, ctx: &mut Ctx| -> Result<()> {
             let k = kind as usize;
             if is_import && defined.iter().any(|&d| d) {
-                return fail(format!("import after {}", ["function", "table", "memory", "global"][defined.iter().position(|&d| d).unwrap()]), f);
+                return fail(
+                    format!(
+                        "import after {}",
+                        ["function", "table", "memory", "global"]
+                            [defined.iter().position(|&d| d).unwrap()]
+                    ),
+                    f,
+                );
             }
             if !is_import {
                 defined[k] = true;
@@ -365,7 +425,9 @@ pub fn parse_module_fields(fields: &[Sexp]) -> Result<Module> {
         };
         match head {
             "type" => {
-                let [def] = rest else { return fail("unexpected token", f) };
+                let [def] = rest else {
+                    return fail("unexpected token", f);
+                };
                 if !def.is_form("func") {
                     return fail("unexpected token", def);
                 }
@@ -374,10 +436,15 @@ pub fn parse_module_fields(fields: &[Sexp]) -> Result<Module> {
                     return fail("unexpected token", def);
                 }
                 ctx.type_names.add(id, f, "type")?;
-                ctx.types.push(FuncType { params: tu.params.iter().map(|p| p.1).collect(), results: tu.results });
+                ctx.types.push(FuncType {
+                    params: tu.params.iter().map(|p| p.1).collect(),
+                    results: tu.results,
+                });
             }
             "import" => {
-                let [_, _, desc] = items else { return fail("unexpected token", f) };
+                let [_, _, desc] = items else {
+                    return fail("unexpected token", f);
+                };
                 let kind = match desc.head() {
                     Some("func") => Kind::Func,
                     Some("table") => Kind::Table,
@@ -388,7 +455,14 @@ pub fn parse_module_fields(fields: &[Sexp]) -> Result<Module> {
                 let (did, _) = field_id(&desc.list().unwrap()[1..]);
                 let k = kind as usize;
                 if defined.iter().any(|&d| d) {
-                    return fail(format!("import after {}", ["function", "table", "memory", "global"][defined.iter().position(|&d| d).unwrap()]), f);
+                    return fail(
+                        format!(
+                            "import after {}",
+                            ["function", "table", "memory", "global"]
+                                [defined.iter().position(|&d| d).unwrap()]
+                        ),
+                        f,
+                    );
                 }
                 let _ = k;
                 let (space, what) = match kind {
@@ -434,10 +508,19 @@ pub fn parse_module_fields(fields: &[Sexp]) -> Result<Module> {
             }
             "func" => {
                 let (exports, import, rest) = inline_exports_imports(rest)?;
-                let index = ctx.funcs.names.get(id.unwrap_or("")).copied().filter(|_| id.is_some());
+                let index = ctx
+                    .funcs
+                    .names
+                    .get(id.unwrap_or(""))
+                    .copied()
+                    .filter(|_| id.is_some());
                 let my_index = index.unwrap_or_else(|| m.func_count() as u32);
                 for e in exports {
-                    m.exports.push(Export { name: e, kind: ExternKind::Func, index: my_index });
+                    m.exports.push(Export {
+                        name: e,
+                        kind: ExternKind::Func,
+                        index: my_index,
+                    });
                 }
                 if let Some((module, name)) = import {
                     let (tu, used) = parse_typeuse(rest, &ctx, true)?;
@@ -445,7 +528,11 @@ pub fn parse_module_fields(fields: &[Sexp]) -> Result<Module> {
                         return fail("unexpected token", &rest[used]);
                     }
                     let t = resolve_typeuse(&tu, &mut ctx.types, f)?;
-                    m.imports.push(Import { module, name, desc: ImportDesc::Func(t) });
+                    m.imports.push(Import {
+                        module,
+                        name,
+                        desc: ImportDesc::Func(t),
+                    });
                 } else {
                     let func = parse_func(rest, id, f, &mut ctx)?;
                     m.funcs.push(func);
@@ -455,20 +542,38 @@ pub fn parse_module_fields(fields: &[Sexp]) -> Result<Module> {
                 let (exports, import, rest) = inline_exports_imports(rest)?;
                 let my_index = m.table_count() as u32;
                 for e in exports {
-                    m.exports.push(Export { name: e, kind: ExternKind::Table, index: my_index });
+                    m.exports.push(Export {
+                        name: e,
+                        kind: ExternKind::Table,
+                        index: my_index,
+                    });
                 }
                 if let Some((module, name)) = import {
                     let lim = table_type(rest, f)?;
-                    m.imports.push(Import { module, name, desc: ImportDesc::Table(lim) });
-                } else if rest.len() == 2 && rest[0].atom() == Some("funcref") && rest[1].is_form("elem") {
+                    m.imports.push(Import {
+                        module,
+                        name,
+                        desc: ImportDesc::Table(lim),
+                    });
+                } else if rest.len() == 2
+                    && rest[0].atom() == Some("funcref")
+                    && rest[1].is_form("elem")
+                {
                     let elems = &rest[1].list().unwrap()[1..];
                     let mut init = Vec::new();
                     for e in elems {
                         init.push(ctx.funcs.resolve(e, "function")?);
                     }
                     let n = init.len() as u32;
-                    m.tables.push(Limits { min: n, max: Some(n) });
-                    m.elems.push(Elem { table: my_index, offset: vec![Instr::I32Const(0), Instr::End], init });
+                    m.tables.push(Limits {
+                        min: n,
+                        max: Some(n),
+                    });
+                    m.elems.push(Elem {
+                        table: my_index,
+                        offset: vec![Instr::I32Const(0), Instr::End],
+                        init,
+                    });
                 } else {
                     m.tables.push(table_type(rest, f)?);
                 }
@@ -477,10 +582,18 @@ pub fn parse_module_fields(fields: &[Sexp]) -> Result<Module> {
                 let (exports, import, rest) = inline_exports_imports(rest)?;
                 let my_index = m.memory_count() as u32;
                 for e in exports {
-                    m.exports.push(Export { name: e, kind: ExternKind::Memory, index: my_index });
+                    m.exports.push(Export {
+                        name: e,
+                        kind: ExternKind::Memory,
+                        index: my_index,
+                    });
                 }
                 if let Some((module, name)) = import {
-                    m.imports.push(Import { module, name, desc: ImportDesc::Memory(limits(rest, f)?) });
+                    m.imports.push(Import {
+                        module,
+                        name,
+                        desc: ImportDesc::Memory(limits(rest, f)?),
+                    });
                 } else if rest.len() == 1 && rest[0].is_form("data") {
                     let mut bytes = Vec::new();
                     for s in &rest[0].list().unwrap()[1..] {
@@ -490,8 +603,15 @@ pub fn parse_module_fields(fields: &[Sexp]) -> Result<Module> {
                         }
                     }
                     let pages = (bytes.len() as u64).div_ceil(65536) as u32;
-                    m.memories.push(Limits { min: pages, max: Some(pages) });
-                    m.datas.push(Data { memory: my_index, offset: vec![Instr::I32Const(0), Instr::End], bytes });
+                    m.memories.push(Limits {
+                        min: pages,
+                        max: Some(pages),
+                    });
+                    m.datas.push(Data {
+                        memory: my_index,
+                        offset: vec![Instr::I32Const(0), Instr::End],
+                        bytes,
+                    });
                 } else {
                     m.memories.push(limits(rest, f)?);
                 }
@@ -500,24 +620,38 @@ pub fn parse_module_fields(fields: &[Sexp]) -> Result<Module> {
                 let (exports, import, rest) = inline_exports_imports(rest)?;
                 let my_index = m.global_count() as u32;
                 for e in exports {
-                    m.exports.push(Export { name: e, kind: ExternKind::Global, index: my_index });
+                    m.exports.push(Export {
+                        name: e,
+                        kind: ExternKind::Global,
+                        index: my_index,
+                    });
                 }
-                let Some(ty_s) = rest.first() else { return fail("unexpected token", f) };
+                let Some(ty_s) = rest.first() else {
+                    return fail("unexpected token", f);
+                };
                 let ty = global_type(ty_s)?;
                 if let Some((module, name)) = import {
                     if rest.len() != 1 {
                         return fail("unexpected token", &rest[1]);
                     }
-                    m.imports.push(Import { module, name, desc: ImportDesc::Global(ty) });
+                    m.imports.push(Import {
+                        module,
+                        name,
+                        desc: ImportDesc::Global(ty),
+                    });
                 } else {
                     let init = const_expr(&rest[1..], &mut ctx, f)?;
                     m.globals.push(Global { ty, init });
                 }
             }
             "export" => {
-                let [name, desc] = items else { return fail("unexpected token", f) };
+                let [name, desc] = items else {
+                    return fail("unexpected token", f);
+                };
                 let name = string_of(name)?;
-                let Some(dl) = desc.list().filter(|l| l.len() == 2) else { return fail("unexpected token", desc) };
+                let Some(dl) = desc.list().filter(|l| l.len() == 2) else {
+                    return fail("unexpected token", desc);
+                };
                 let (kind, index) = match desc.head() {
                     Some("func") => (ExternKind::Func, ctx.funcs.resolve(&dl[1], "function")?),
                     Some("table") => (ExternKind::Table, ctx.tables.resolve(&dl[1], "table")?),
@@ -528,7 +662,9 @@ pub fn parse_module_fields(fields: &[Sexp]) -> Result<Module> {
                 m.exports.push(Export { name, kind, index });
             }
             "start" => {
-                let [x] = items else { return fail("unexpected token", f) };
+                let [x] = items else {
+                    return fail("unexpected token", f);
+                };
                 if m.start.is_some() {
                     return fail("multiple start sections", f);
                 }
@@ -543,13 +679,19 @@ pub fn parse_module_fields(fields: &[Sexp]) -> Result<Module> {
                     }
                     _ => 0,
                 };
-                let Some(off) = rest.first() else { return fail("unexpected token", f) };
+                let Some(off) = rest.first() else {
+                    return fail("unexpected token", f);
+                };
                 let offset = offset_expr(off, &mut ctx)?;
                 let mut init = Vec::new();
                 for s in &rest[1..] {
                     init.push(ctx.funcs.resolve(s, "function")?);
                 }
-                m.elems.push(Elem { table, offset, init });
+                m.elems.push(Elem {
+                    table,
+                    offset,
+                    init,
+                });
             }
             "data" => {
                 let mut rest = items;
@@ -560,7 +702,9 @@ pub fn parse_module_fields(fields: &[Sexp]) -> Result<Module> {
                     }
                     _ => 0,
                 };
-                let Some(off) = rest.first() else { return fail("unexpected token", f) };
+                let Some(off) = rest.first() else {
+                    return fail("unexpected token", f);
+                };
                 let offset = offset_expr(off, &mut ctx)?;
                 let mut bytes = Vec::new();
                 for s in &rest[1..] {
@@ -569,7 +713,11 @@ pub fn parse_module_fields(fields: &[Sexp]) -> Result<Module> {
                         None => return fail("unexpected token", s),
                     }
                 }
-                m.datas.push(Data { memory, offset, bytes });
+                m.datas.push(Data {
+                    memory,
+                    offset,
+                    bytes,
+                });
             }
             _ => unreachable!(),
         }
@@ -597,7 +745,9 @@ fn import_desc(kind: &str, items: &[Sexp], at: &Sexp, ctx: &mut Ctx) -> Result<I
         "table" => ImportDesc::Table(table_type(items, at)?),
         "memory" => ImportDesc::Memory(limits(items, at)?),
         "global" => {
-            let [t] = items else { return fail("unexpected token", at) };
+            let [t] = items else {
+                return fail("unexpected token", at);
+            };
             ImportDesc::Global(global_type(t)?)
         }
         _ => return fail("unexpected token", at),
@@ -636,7 +786,11 @@ fn parse_func(items: &[Sexp], name: Option<&str>, at: &Sexp, ctx: &mut Ctx) -> R
         }
         tu.params.len()
     } else {
-        let n = ctx.types.get(type_idx as usize).map(|t| t.params.len()).unwrap_or(0);
+        let n = ctx
+            .types
+            .get(type_idx as usize)
+            .map(|t| t.params.len())
+            .unwrap_or(0);
         for _ in 0..n {
             locals_space.add(None, at, "local")?;
             local_names.push(None);
@@ -674,8 +828,18 @@ fn parse_func(items: &[Sexp], name: Option<&str>, at: &Sexp, ctx: &mut Ctx) -> R
     let mut offsets = b.offsets;
     body.push(Instr::End);
     offsets.push(end_offset as u32);
-    link_blocks(&mut body).map_err(|e| ParseError { message: e.into(), offset: at.offset() })?;
-    Ok(Func { type_idx, locals, body, name: name.map(String::from), local_names, offsets })
+    link_blocks(&mut body).map_err(|e| ParseError {
+        message: e.into(),
+        offset: at.offset(),
+    })?;
+    Ok(Func {
+        type_idx,
+        locals,
+        body,
+        name: name.map(String::from),
+        local_names,
+        offsets,
+    })
 }
 
 // ---------------------------------------------------------------- instructions
@@ -686,11 +850,24 @@ struct Body<'c> {
     labels: Vec<Option<String>>,
     out: Vec<Instr>,
     offsets: Vec<u32>,
+    /// How deeply folded expressions nest right now (bounded, so hostile input
+    /// gets an error instead of overflowing the browser's small stack).
+    depth: usize,
 }
+
+/// Far deeper than any real code (the spec tests stay under 100).
+pub const MAX_NESTING: usize = 300;
 
 impl<'c> Body<'c> {
     fn new(ctx: &'c mut Ctx, locals: Space) -> Self {
-        Body { ctx, locals, labels: Vec::new(), out: Vec::new(), offsets: Vec::new() }
+        Body {
+            ctx,
+            locals,
+            labels: Vec::new(),
+            out: Vec::new(),
+            offsets: Vec::new(),
+            depth: 0,
+        }
     }
 
     fn emit(&mut self, i: Instr, at: usize) {
@@ -700,7 +877,12 @@ impl<'c> Body<'c> {
 
     fn label(&self, s: &Sexp) -> Result<u32> {
         match s {
-            Sexp::Tok(Tok::Id(n), _) => match self.labels.iter().rev().position(|l| l.as_deref() == Some(n)) {
+            Sexp::Tok(Tok::Id(n), _) => match self
+                .labels
+                .iter()
+                .rev()
+                .position(|l| l.as_deref() == Some(n))
+            {
                 Some(depth) => Ok(depth as u32),
                 None => fail("unknown label", s),
             },
@@ -733,7 +915,12 @@ impl<'c> Body<'c> {
         let ty = match results.as_slice() {
             [] => BlockType::Empty,
             [t] => BlockType::Value(*t),
-            _ => return fail("multiple block results are not supported in WebAssembly 1.0", &items[i - 1]),
+            _ => {
+                return fail(
+                    "multiple block results are not supported in WebAssembly 1.0",
+                    &items[i - 1],
+                )
+            }
         };
         Ok((label, ty, i))
     }
@@ -750,7 +937,9 @@ impl<'c> Body<'c> {
                 i += 1;
                 continue;
             }
-            let Some(op) = s.atom() else { return fail("unexpected token", s) };
+            let Some(op) = s.atom() else {
+                return fail("unexpected token", s);
+            };
             let at = s.offset();
             i += 1;
             match op {
@@ -760,14 +949,20 @@ impl<'c> Body<'c> {
                     let ins = match op {
                         "block" => Instr::Block { ty, end: UNLINKED },
                         "loop" => Instr::Loop { ty, end: UNLINKED },
-                        _ => Instr::If { ty, else_: UNLINKED, end: UNLINKED },
+                        _ => Instr::If {
+                            ty,
+                            else_: UNLINKED,
+                            end: UNLINKED,
+                        },
                     };
                     self.emit(ins, at);
                     self.labels.push(label.clone());
                     open.push((if op == "if" { "if" } else { "block" }, label));
                 }
                 "else" | "end" => {
-                    let Some((kind, label)) = open.last().cloned() else { return fail("unexpected token", s) };
+                    let Some((kind, label)) = open.last().cloned() else {
+                        return fail("unexpected token", s);
+                    };
                     if let Some(id) = items.get(i).and_then(|x| x.id()) {
                         if label.as_deref() != Some(id) {
                             return fail("mismatching label", &items[i]);
@@ -800,25 +995,53 @@ impl<'c> Body<'c> {
 
     /// `(op immediates… operands…)`, `(block …)`, `(loop …)`, `(if … (then …) (else …))`.
     fn folded(&mut self, s: &Sexp) -> Result<()> {
+        if self.depth >= MAX_NESTING {
+            return fail("nesting too deep", s);
+        }
+        self.depth += 1;
+        let r = self.folded_inner(s);
+        self.depth -= 1;
+        r
+    }
+
+    fn folded_inner(&mut self, s: &Sexp) -> Result<()> {
         let l = s.list().unwrap();
-        let Some(head) = l.first() else { return fail("unexpected token", s) };
-        let Some(op) = head.atom() else { return fail("unexpected token", head) };
+        let Some(head) = l.first() else {
+            return fail("unexpected token", s);
+        };
+        let Some(op) = head.atom() else {
+            return fail("unexpected token", head);
+        };
         let at = head.offset();
         let rest = &l[1..];
         match op {
             "block" | "loop" => {
                 let (label, ty, used) = self.block_header(rest)?;
-                self.emit(if op == "block" { Instr::Block { ty, end: UNLINKED } } else { Instr::Loop { ty, end: UNLINKED } }, at);
+                self.emit(
+                    if op == "block" {
+                        Instr::Block { ty, end: UNLINKED }
+                    } else {
+                        Instr::Loop { ty, end: UNLINKED }
+                    },
+                    at,
+                );
                 self.labels.push(label);
                 self.instrs(&rest[used..])?;
                 self.labels.pop();
-                let end_at = if let Sexp::List(_, _, close) = s { *close } else { at };
+                let end_at = if let Sexp::List(_, _, close) = s {
+                    *close
+                } else {
+                    at
+                };
                 self.emit(Instr::End, end_at);
             }
             "if" => {
                 let (label, ty, used) = self.block_header(rest)?;
                 let mut j = used;
-                while let Some(c) = rest.get(j).filter(|c| c.list().is_some() && !c.is_form("then")) {
+                while let Some(c) = rest
+                    .get(j)
+                    .filter(|c| c.list().is_some() && !c.is_form("then"))
+                {
                     self.folded(c)?;
                     j += 1;
                 }
@@ -833,7 +1056,14 @@ impl<'c> Body<'c> {
                 if j != rest.len() {
                     return fail("unexpected token", &rest[j]);
                 }
-                self.emit(Instr::If { ty, else_: UNLINKED, end: UNLINKED }, at);
+                self.emit(
+                    Instr::If {
+                        ty,
+                        else_: UNLINKED,
+                        end: UNLINKED,
+                    },
+                    at,
+                );
                 self.labels.push(label);
                 self.instrs(&then.list().unwrap()[1..])?;
                 if let Some(e) = els {
@@ -841,7 +1071,11 @@ impl<'c> Body<'c> {
                     self.instrs(&e.list().unwrap()[1..])?;
                 }
                 self.labels.pop();
-                let end_at = if let Sexp::List(_, _, close) = s { *close } else { at };
+                let end_at = if let Sexp::List(_, _, close) = s {
+                    *close
+                } else {
+                    at
+                };
                 self.emit(Instr::End, end_at);
             }
             _ => {
@@ -849,7 +1083,11 @@ impl<'c> Body<'c> {
                 let n_imm = rest.iter().take_while(|x| x.list().is_none()).count();
                 // call_indirect's typeuse is made of lists; it is part of the immediates.
                 let typeuse_len = if op == "call_indirect" {
-                    rest.iter().take_while(|x| x.is_form("type") || x.is_form("param") || x.is_form("result")).count()
+                    rest.iter()
+                        .take_while(|x| {
+                            x.is_form("type") || x.is_form("param") || x.is_form("result")
+                        })
+                        .count()
                 } else {
                     0
                 };
@@ -900,7 +1138,11 @@ impl<'c> Body<'c> {
             let mut used = 0;
             let mut offset = 0u32;
             let mut align = None;
-            if let Some(v) = imm.get(used).and_then(|s| s.atom()).and_then(|a| a.strip_prefix("offset=")) {
+            if let Some(v) = imm
+                .get(used)
+                .and_then(|s| s.atom())
+                .and_then(|a| a.strip_prefix("offset="))
+            {
                 offset = match parse_nat(v) {
                     Some(x) if x <= u32::MAX as u64 => x as u32,
                     Some(_) => return fail("constant out of range", &imm[used]),
@@ -908,7 +1150,11 @@ impl<'c> Body<'c> {
                 };
                 used += 1;
             }
-            if let Some(v) = imm.get(used).and_then(|s| s.atom()).and_then(|a| a.strip_prefix("align=")) {
+            if let Some(v) = imm
+                .get(used)
+                .and_then(|s| s.atom())
+                .and_then(|a| a.strip_prefix("align="))
+            {
                 let a = match parse_nat(v) {
                     Some(x) if x <= u32::MAX as u64 => x as u32,
                     _ => return fail("unknown operator", &imm[used]),
@@ -919,15 +1165,32 @@ impl<'c> Body<'c> {
                 align = Some(a.trailing_zeros());
                 used += 1;
             }
-            let arg = MemArg { align: align.unwrap_or(mop.bytes.trailing_zeros()), offset };
-            self.emit(if crate::opcodes::is_store(mop.code) { Instr::Store(mop.code, arg) } else { Instr::Load(mop.code, arg) }, at);
+            let arg = MemArg {
+                align: align.unwrap_or(mop.bytes.trailing_zeros()),
+                offset,
+            };
+            self.emit(
+                if crate::opcodes::is_store(mop.code) {
+                    Instr::Store(mop.code, arg)
+                } else {
+                    Instr::Load(mop.code, arg)
+                },
+                at,
+            );
             return Ok(used);
         }
         let ins = match op {
             "br" | "br_if" => {
                 need(1)?;
                 let l = self.label(&imm[0])?;
-                self.emit(if op == "br" { Instr::Br(l) } else { Instr::BrIf(l) }, at);
+                self.emit(
+                    if op == "br" {
+                        Instr::Br(l)
+                    } else {
+                        Instr::BrIf(l)
+                    },
+                    at,
+                );
                 return Ok(1);
             }
             "br_table" => {
@@ -965,14 +1228,24 @@ impl<'c> Body<'c> {
             "global.get" | "global.set" => {
                 need(1)?;
                 let x = self.ctx.globals.resolve(&imm[0], "global")?;
-                if op == "global.get" { Instr::GlobalGet(x) } else { Instr::GlobalSet(x) }
+                if op == "global.get" {
+                    Instr::GlobalGet(x)
+                } else {
+                    Instr::GlobalSet(x)
+                }
             }
             "i32.const" | "i64.const" => {
                 need(1)?;
-                let Some(text) = imm[0].atom() else { return fail("unexpected token", &imm[0]) };
+                let Some(text) = imm[0].atom() else {
+                    return fail("unexpected token", &imm[0]);
+                };
                 let bits = if op == "i32.const" { 32 } else { 64 };
                 let v = parse_int(text, bits).or_else(|e| fail(e, &imm[0]))?;
-                if bits == 32 { Instr::I32Const(v as u32 as i32) } else { Instr::I64Const(v as i64) }
+                if bits == 32 {
+                    Instr::I32Const(v as u32 as i32)
+                } else {
+                    Instr::I64Const(v as i64)
+                }
             }
             "f32.const" => {
                 need(1)?;
@@ -995,10 +1268,21 @@ mod tests {
 
     #[test]
     fn folded_and_flat_forms_agree() {
-        let a = parse_module_text("(module (func (result i32) (i32.add (i32.const 1) (i32.const 2))))").unwrap();
-        let b = parse_module_text("(module (func (result i32) i32.const 1 i32.const 2 i32.add))").unwrap();
+        let a =
+            parse_module_text("(module (func (result i32) (i32.add (i32.const 1) (i32.const 2))))")
+                .unwrap();
+        let b = parse_module_text("(module (func (result i32) i32.const 1 i32.const 2 i32.add))")
+            .unwrap();
         assert_eq!(a.funcs[0].body, b.funcs[0].body);
-        assert_eq!(a.funcs[0].body, vec![Instr::I32Const(1), Instr::I32Const(2), Instr::Num(0x6a), Instr::End]);
+        assert_eq!(
+            a.funcs[0].body,
+            vec![
+                Instr::I32Const(1),
+                Instr::I32Const(2),
+                Instr::Num(0x6a),
+                Instr::End
+            ]
+        );
     }
 
     #[test]
@@ -1012,10 +1296,23 @@ mod tests {
         .unwrap();
         assert_eq!(m.types.len(), 3); // [i32]->[], [i32]->[i32], []->[]
         assert_eq!(m.funcs[0].type_idx, 1);
-        assert_eq!(m.funcs[0].body[0], Instr::Block { ty: BlockType::Value(ValType::I32), end: 5 });
+        assert_eq!(
+            m.funcs[0].body[0],
+            Instr::Block {
+                ty: BlockType::Value(ValType::I32),
+                end: 5
+            }
+        );
         assert_eq!(m.funcs[0].body[3], Instr::BrIf(0));
         assert_eq!(m.funcs[1].body[1], Instr::Call(0));
-        assert_eq!(m.exports[0], Export { name: "g".into(), kind: ExternKind::Func, index: 1 });
+        assert_eq!(
+            m.exports[0],
+            Export {
+                name: "g".into(),
+                kind: ExternKind::Func,
+                index: 1
+            }
+        );
     }
 
     #[test]
@@ -1025,12 +1322,36 @@ mod tests {
                (func $a (if (i32.const 1) (then nop) (else nop))))",
         )
         .unwrap();
-        assert_eq!(m.memories[0], Limits { min: 1, max: Some(1) });
+        assert_eq!(
+            m.memories[0],
+            Limits {
+                min: 1,
+                max: Some(1)
+            }
+        );
         assert_eq!(m.datas[0].bytes, b"hi");
-        assert_eq!(m.tables[0], Limits { min: 1, max: Some(1) });
+        assert_eq!(
+            m.tables[0],
+            Limits {
+                min: 1,
+                max: Some(1)
+            }
+        );
         assert_eq!(
             m.funcs[0].body,
-            vec![Instr::I32Const(1), Instr::If { ty: BlockType::Empty, else_: 3, end: 5 }, Instr::Nop, Instr::Else { end: 5 }, Instr::Nop, Instr::End, Instr::End]
+            vec![
+                Instr::I32Const(1),
+                Instr::If {
+                    ty: BlockType::Empty,
+                    else_: 3,
+                    end: 5
+                },
+                Instr::Nop,
+                Instr::Else { end: 5 },
+                Instr::Nop,
+                Instr::End,
+                Instr::End
+            ]
         );
     }
 
@@ -1038,15 +1359,46 @@ mod tests {
     fn rejects_malformed_text() {
         let bad = |s: &str| parse_module_text(s).unwrap_err().message;
         assert_eq!(bad("(module (func block $a end $b))"), "mismatching label");
-        assert_eq!(bad("(module (func i32.const 0x100000000 drop))"), "constant out of range");
+        assert_eq!(
+            bad("(module (func i32.const 0x100000000 drop))"),
+            "constant out of range"
+        );
         assert_eq!(bad("(module (func (br $nowhere)))"), "unknown label");
         assert_eq!(bad("(module (func i32.foo))"), "unknown operator");
-        assert_eq!(bad("(module (type $t (func)) (func (type $t) (param i32)))"), "inline function type");
-        assert_eq!(bad("(module (func) (import \"a\" \"b\" (func)))"), "import after function");
-        assert_eq!(bad("(module (func (i32.load align=3 (i32.const 0)) drop))"), "alignment");
+        assert_eq!(
+            bad("(module (type $t (func)) (func (type $t) (param i32)))"),
+            "inline function type"
+        );
+        assert_eq!(
+            bad("(module (func) (import \"a\" \"b\" (func)))"),
+            "import after function"
+        );
+        assert_eq!(
+            bad("(module (func (i32.load align=3 (i32.const 0)) drop))"),
+            "alignment"
+        );
         // Valid text but invalid module: left for the validator.
         assert!(parse_module_text("(module (func (result i32) (i64.const 1)))").is_ok());
         assert!(parse_module_text("(module (func br 9))").is_ok());
+    }
+
+    #[test]
+    fn deep_nesting_is_an_error_not_a_crash() {
+        let deep = format!(
+            "(module (func (result i32) {}(i32.const 1){}))",
+            "(i32.eqz ".repeat(5000),
+            ")".repeat(5000)
+        );
+        assert_eq!(
+            parse_module_text(&deep).unwrap_err().message,
+            "nesting too deep"
+        );
+        let ok = format!(
+            "(module (func (result i32) {}(i32.const 1){}))",
+            "(i32.eqz ".repeat(200),
+            ")".repeat(200)
+        );
+        assert!(parse_module_text(&ok).is_ok());
     }
 
     #[test]

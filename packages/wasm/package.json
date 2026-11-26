@@ -1,0 +1,24 @@
+{
+  "name": "@glass/wasm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Glass Wasm: a WebAssembly VM written from scratch in Rust, with a debugger you can see through, graded by the official spec testsuite.",
+  "license": "MIT",
+  "author": "Vin, Vin's Atelier (https://vwesley.dev)",
+  "type": "module",
+  "scripts": {
+    "build:wasm": "cargo build --release --target wasm32-unknown-unknown -p glass-wasm && node scripts/copy-wasm.mjs",
+    "dev": "npm run build:wasm && vite",
+    "build": "npm run build:wasm && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "npm run build:wasm && vitest run",
+    "test:rust": "cargo test -p glass-wasm",
+    "spec": "cargo run --release -p glass-wasm -- spec spec/test/core",
+    "test:e2e": "playwright test",
+    "verify": "npm run typecheck && npm run test:rust && npm test && npm run build"
+  },
+  "dependencies": {
+    "@glass/ui": "1.0.0"
+  }
+}

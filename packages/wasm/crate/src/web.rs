@@ -64,9 +64,24 @@ pub unsafe extern "C" fn gw_run_spec(ptr: *const u8, len: usize) -> usize {
     let fails: Vec<String> = r
         .failures
         .iter()
-        .map(|f| format!("{{\"line\":{},\"command\":{},\"message\":{}}}", f.line, json::string(&f.command), json::string(&f.message)))
+        .map(|f| {
+            format!(
+                "{{\"line\":{},\"command\":{},\"message\":{}}}",
+                f.line,
+                json::string(&f.command),
+                json::string(&f.message)
+            )
+        })
         .collect();
-    set_out(format!("{{\"passed\":{},\"failed\":{},\"failures\":[{}]}}", r.passed, r.failed, fails.join(",")).into_bytes())
+    set_out(
+        format!(
+            "{{\"passed\":{},\"failed\":{},\"failures\":[{}]}}",
+            r.passed,
+            r.failed,
+            fails.join(",")
+        )
+        .into_bytes(),
+    )
 }
 
 /// Loads a module for debugging: text (`binary == 0`) or binary. Returns 0 and the
@@ -77,7 +92,11 @@ pub unsafe extern "C" fn gw_run_spec(ptr: *const u8, len: usize) -> usize {
 #[no_mangle]
 pub unsafe extern "C" fn gw_load(ptr: *const u8, len: usize, binary: u32) -> u32 {
     let bytes = unsafe { input(ptr, len) };
-    let session = if binary != 0 { Session::load_binary(bytes) } else { Session::load_text(&String::from_utf8_lossy(bytes)) };
+    let session = if binary != 0 {
+        Session::load_binary(bytes)
+    } else {
+        Session::load_text(&String::from_utf8_lossy(bytes))
+    };
     match session {
         Ok(s) => {
             set_out(s.describe().into_bytes());
@@ -92,19 +111,27 @@ pub unsafe extern "C" fn gw_load(ptr: *const u8, len: usize, binary: u32) -> u32
     }
 }
 
-/// Runs an export of the loaded module. Input: the export name, then one argument per
-/// line. Stops after `stop_at` steps (negative: run to the end). Returns 0 and the
+/// Runs an export of the loaded module. Input: the export name's length in bytes,
+/// `:`, the name, then one argument per line (names may contain anything, even newlines). Stops after `stop_at` steps (negative: run to the end). Returns 0 and the
 /// machine state, or 1 and an error message.
 ///
 /// # Safety
 /// `ptr`/`len` must describe bytes written by the page.
 #[no_mangle]
 pub unsafe extern "C" fn gw_run(ptr: *const u8, len: usize, stop_at: f64) -> u32 {
-    let text = String::from_utf8_lossy(unsafe { input(ptr, len) }).into_owned();
-    let mut lines = text.split('\n');
-    let name = lines.next().unwrap_or("").to_string();
-    let args: Vec<String> = lines.map(String::from).collect();
-    let stop = if stop_at < 0.0 { None } else { Some(stop_at as u64) };
+    let bytes = unsafe { input(ptr, len) };
+    let (name, args) = match split_call(bytes) {
+        Some(x) => x,
+        None => {
+            set_out(b"malformed call".to_vec());
+            return 1;
+        }
+    };
+    let stop = if stop_at < 0.0 {
+        None
+    } else {
+        Some(stop_at as u64)
+    };
     let r = SESSION.with(|x| match x.borrow_mut().as_mut() {
         Some(s) => s.run(&name, &args, stop),
         None => Err("no module loaded".into()),
@@ -121,11 +148,34 @@ pub unsafe extern "C" fn gw_run(ptr: *const u8, len: usize, stop_at: f64) -> u32
     }
 }
 
+/// `<name length>:<name><arg>\n<arg>…` to the name and its arguments.
+fn split_call(bytes: &[u8]) -> Option<(String, Vec<String>)> {
+    let colon = bytes.iter().position(|&b| b == b':')?;
+    let n: usize = std::str::from_utf8(&bytes[..colon]).ok()?.parse().ok()?;
+    let rest = bytes.get(colon + 1..)?;
+    let name = String::from_utf8(rest.get(..n)?.to_vec()).ok()?;
+    let tail = String::from_utf8_lossy(&rest[n..]);
+    let args = if tail.is_empty() {
+        vec![]
+    } else {
+        tail.split('\n').map(String::from).collect()
+    };
+    Some((name, args))
+}
+
 /// The last full run's trace: (function index, pc) per step as little-endian u32 pairs.
 #[no_mangle]
 pub extern "C" fn gw_trace() -> usize {
     let bytes = SESSION.with(|x| {
-        x.borrow().as_ref().map(|s| s.trace.iter().flat_map(|(f, pc)| f.to_le_bytes().into_iter().chain(pc.to_le_bytes())).collect()).unwrap_or_default()
+        x.borrow()
+            .as_ref()
+            .map(|s| {
+                s.trace
+                    .iter()
+                    .flat_map(|(f, pc)| f.to_le_bytes().into_iter().chain(pc.to_le_bytes()))
+                    .collect()
+            })
+            .unwrap_or_default()
     });
     set_out(bytes)
 }
@@ -133,6 +183,11 @@ pub extern "C" fn gw_trace() -> usize {
 /// Copies `len` bytes of linear memory from `offset` (as left by the last run) to the output.
 #[no_mangle]
 pub extern "C" fn gw_memory(offset: u32, len: u32) -> usize {
-    let bytes = SESSION.with(|x| x.borrow().as_ref().map(|s| s.read_memory(offset as usize, len as usize)).unwrap_or_default());
+    let bytes = SESSION.with(|x| {
+        x.borrow()
+            .as_ref()
+            .map(|s| s.read_memory(offset as usize, len as usize))
+            .unwrap_or_default()
+    });
     set_out(bytes)
 }

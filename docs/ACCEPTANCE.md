@@ -46,14 +46,18 @@ If the sandbox's Chromium build doesn't match Playwright, prefix the e2e runs wi
 | Renderer unit tests | `npm test -w @glass/hub` | site config invariants (compiler at the root, unique slugs and paths), live cards link, planned tiles never link, grades and escaping |
 | Browser flows on the assembled site | `npm run test:e2e -w @glass/hub` | both pages in both themes at both widths: no console errors, no other origins, no overflow, axe clean. Dark by default under an OS light preference. The toggle persists. Hub ↔ compiler navigation works. The page works with JavaScript off. |
 
-## Glass Wasm (`packages/wasm`), milestone 2
+## Glass Wasm (`packages/wasm`)
+
+Needs the testsuite submodule: `git submodule update --init --depth 1`.
 
 | Check | Command | Pass means |
 | --- | --- | --- |
-| Rust unit tests | `cargo test -p glass-wasm` | decoder, validator, interpreter and text-parser unit tests |
-| Spec testsuite (`wg-1.0`), integer and control-flow files | `cargo run -p glass-wasm --bin glass-wasm -- spec packages/wasm/testsuite` | every command in `i32`, `i64`, `block`, `loop`, `if`, `br`, `br_if`, `br_table`, `call`, `return`, `local_get/set/tee`, `nop`, `unreachable` passes. Per-file counts recorded in `packages/wasm/results.json` |
-| The page's live count equals the recorded count | `npm run test:e2e -w @glass/wasm` | the browser runs the same files and shows the same numbers |
-| Debugger flows | same e2e suite | step through a module; value stack, locals, frames and memory update; axe clean |
+| Rust format and lints | `cargo fmt --check -p glass-wasm && cargo clippy -p glass-wasm --all-targets -- -D warnings` | clean |
+| Rust unit tests | `cargo test -p glass-wasm` | 22 pass: float literals and rounding, LEB128 and binary errors, lexer, text parser (names, folding, abbreviations, malformed cases), validator, debugger sessions, a small spec script |
+| **The WebAssembly 1.0 spec testsuite** (WebAssembly/spec `wg-1.0`, `test/core`, 73 files) | `npm run spec -w @glass/wasm` | **19,270 of 19,270 commands pass, 73 of 73 files** (grading rules: DECISIONS S14) |
+| Recorded results are current | `npm run check:results` | `packages/wasm/results.json` matches a fresh CLI run |
+| The VM built for the browser | `npm test -w @glass/wasm` | 11 pass: spec scripts run, errors are explained, every example gives its known answer (120, 55, "ssalg" in memory, five printed squares, a jump-table result, a divide-by-zero trap), and replaying to any step agrees with the trace |
+| Debugger flows, both themes, 1440px and 375px | `npm run test:e2e -w @glass/wasm` | 25 pass: axe clean, no console errors, no other origins, no overflow, step forwards and back, recursion frames, instruction ↔ source ↔ timeline linking, keyboard navigation, memory reads and writes, host output, traps, invalid modules, arguments, share links, the page without JavaScript, and **the whole testsuite run in the browser matching the recorded counts** |
 
 ## Later members
 
@@ -66,4 +70,5 @@ grading suite, the exact command, and what "pass" means.
 | Glass Console | CHIP-8 test ROM results, then the Blargg and Mooneye pass list |
 | Glass Kernel | known-answer system-call tests |
 | Language Tools | LSP request/response tests |
+| Pane → Wasm backend (M3) | every compiler example compiles to Wasm and gives the same output in Glass Wasm and in Node's own WebAssembly |
 | Wasm JIT | the spec testsuite plus benchmarks against the interpreter |

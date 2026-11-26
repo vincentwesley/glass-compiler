@@ -16,7 +16,11 @@ pub struct ValidationError {
 type Result<T> = std::result::Result<T, ValidationError>;
 
 fn err<T>(message: &str) -> Result<T> {
-    Err(ValidationError { message: message.into(), func: None, instr: None })
+    Err(ValidationError {
+        message: message.into(),
+        func: None,
+        instr: None,
+    })
 }
 
 const MAX_PAGES: u32 = 65536;
@@ -85,7 +89,13 @@ pub fn validate(m: &Module) -> Result<()> {
         globals.push(g.ty);
     }
 
-    let module_ctx = ModuleCtx { m, funcs: &funcs, tables: tables.len(), memories: memories.len(), globals: &globals };
+    let module_ctx = ModuleCtx {
+        m,
+        funcs: &funcs,
+        tables: tables.len(),
+        memories: memories.len(),
+        globals: &globals,
+    };
     let imported_funcs = funcs.len() - m.funcs.len();
     for (i, f) in m.funcs.iter().enumerate() {
         let func_index = (imported_funcs + i) as u32;
@@ -113,7 +123,9 @@ pub fn validate(m: &Module) -> Result<()> {
         const_expr(&d.offset, ValType::I32, &globals[..imported_globals])?;
     }
     if let Some(s) = m.start {
-        let Some(&t) = funcs.get(s as usize) else { return err("unknown function") };
+        let Some(&t) = funcs.get(s as usize) else {
+            return err("unknown function");
+        };
         let ft = &m.types[t as usize];
         if !ft.params.is_empty() || !ft.results.is_empty() {
             return err("start function");
@@ -151,8 +163,22 @@ fn const_expr(expr: &[Instr], ty: ValType, globals: &[GlobalType]) -> Result<()>
         [Instr::End] => return err("type mismatch"),
         _ => {
             // Anything else is either not constant, or a constant sequence of the wrong length.
-            let all_const = expr.iter().all(|i| matches!(i, Instr::I32Const(_) | Instr::I64Const(_) | Instr::F32Const(_) | Instr::F64Const(_) | Instr::GlobalGet(_) | Instr::End));
-            return err(if all_const { "type mismatch" } else { "constant expression required" });
+            let all_const = expr.iter().all(|i| {
+                matches!(
+                    i,
+                    Instr::I32Const(_)
+                        | Instr::I64Const(_)
+                        | Instr::F32Const(_)
+                        | Instr::F64Const(_)
+                        | Instr::GlobalGet(_)
+                        | Instr::End
+                )
+            });
+            return err(if all_const {
+                "type mismatch"
+            } else {
+                "constant expression required"
+            });
         }
     };
     if got != ty {
@@ -252,9 +278,19 @@ fn validate_func(mc: &ModuleCtx, f: &Func) -> Result<()> {
     let mut locals = ft.params.clone();
     locals.extend_from_slice(&f.locals);
     let func_results: &'static [ValType] = leak_results(&ft.results)?;
-    let mut c = FuncCheck { ops: Vec::new(), ctrls: Vec::new(), locals, results: &ft.results };
+    let mut c = FuncCheck {
+        ops: Vec::new(),
+        ctrls: Vec::new(),
+        locals,
+        results: &ft.results,
+    };
     // The function body is the outermost block.
-    c.ctrls.push(Ctrl { kind: Kind::Block, results: func_results, height: 0, unreachable: false });
+    c.ctrls.push(Ctrl {
+        kind: Kind::Block,
+        results: func_results,
+        height: 0,
+        unreachable: false,
+    });
 
     for (pc, ins) in f.body.iter().enumerate() {
         step(mc, &mut c, ins).map_err(|mut e| {
@@ -262,7 +298,11 @@ fn validate_func(mc: &ModuleCtx, f: &Func) -> Result<()> {
             e
         })?;
         if c.ctrls.is_empty() && pc + 1 != f.body.len() {
-            return Err(ValidationError { message: "instructions after the function's end".into(), func: None, instr: Some(pc + 1) });
+            return Err(ValidationError {
+                message: "instructions after the function's end".into(),
+                func: None,
+                instr: Some(pc + 1),
+            });
         }
     }
     if !c.ctrls.is_empty() {
@@ -287,19 +327,38 @@ fn step(mc: &ModuleCtx, c: &mut FuncCheck, ins: &Instr) -> Result<()> {
         Unreachable => c.set_unreachable(),
         Nop => {}
         Block { ty, .. } | Loop { ty, .. } => {
-            let kind = if matches!(ins, Block { .. }) { Kind::Block } else { Kind::Loop };
-            c.ctrls.push(Ctrl { kind, results: ty.results(), height: c.ops.len(), unreachable: false });
+            let kind = if matches!(ins, Block { .. }) {
+                Kind::Block
+            } else {
+                Kind::Loop
+            };
+            c.ctrls.push(Ctrl {
+                kind,
+                results: ty.results(),
+                height: c.ops.len(),
+                unreachable: false,
+            });
         }
         If { ty, .. } => {
             c.pop_expect(ValType::I32)?;
-            c.ctrls.push(Ctrl { kind: Kind::If, results: ty.results(), height: c.ops.len(), unreachable: false });
+            c.ctrls.push(Ctrl {
+                kind: Kind::If,
+                results: ty.results(),
+                height: c.ops.len(),
+                unreachable: false,
+            });
         }
         Else { .. } => {
             if c.ctrls.last().map(|x| x.kind) != Some(Kind::If) {
                 return err("else without if");
             }
             let frame = c.end_frame()?;
-            c.ctrls.push(Ctrl { kind: Kind::Else, results: frame.results, height: c.ops.len(), unreachable: false });
+            c.ctrls.push(Ctrl {
+                kind: Kind::Else,
+                results: frame.results,
+                height: c.ops.len(),
+                unreachable: false,
+            });
         }
         End => {
             let frame = c.end_frame()?;
@@ -341,7 +400,9 @@ fn step(mc: &ModuleCtx, c: &mut FuncCheck, ins: &Instr) -> Result<()> {
             c.set_unreachable();
         }
         Call(x) => {
-            let Some(&t) = mc.funcs.get(*x as usize) else { return err("unknown function") };
+            let Some(&t) = mc.funcs.get(*x as usize) else {
+                return err("unknown function");
+            };
             let ft = &mc.m.types[t as usize];
             c.pop_all(&ft.params)?;
             for &r in &ft.results {
@@ -352,7 +413,9 @@ fn step(mc: &ModuleCtx, c: &mut FuncCheck, ins: &Instr) -> Result<()> {
             if mc.tables == 0 {
                 return err("unknown table");
             }
-            let Some(ft) = mc.m.types.get(*t as usize) else { return err("unknown type") };
+            let Some(ft) = mc.m.types.get(*t as usize) else {
+                return err("unknown type");
+            };
             c.pop_expect(ValType::I32)?;
             c.pop_all(&ft.params)?;
             for &r in &ft.results {
@@ -373,7 +436,9 @@ fn step(mc: &ModuleCtx, c: &mut FuncCheck, ins: &Instr) -> Result<()> {
             }
         }
         LocalGet(x) | LocalSet(x) | LocalTee(x) => {
-            let Some(&t) = c.locals.get(*x as usize) else { return err("unknown local") };
+            let Some(&t) = c.locals.get(*x as usize) else {
+                return err("unknown local");
+            };
             match ins {
                 LocalGet(_) => c.push(Some(t)),
                 LocalSet(_) => c.pop_expect(t)?,
@@ -384,11 +449,15 @@ fn step(mc: &ModuleCtx, c: &mut FuncCheck, ins: &Instr) -> Result<()> {
             }
         }
         GlobalGet(x) => {
-            let Some(g) = mc.globals.get(*x as usize) else { return err("unknown global") };
+            let Some(g) = mc.globals.get(*x as usize) else {
+                return err("unknown global");
+            };
             c.push(Some(g.ty));
         }
         GlobalSet(x) => {
-            let Some(g) = mc.globals.get(*x as usize) else { return err("unknown global") };
+            let Some(g) = mc.globals.get(*x as usize) else {
+                return err("unknown global");
+            };
             if !g.mutable {
                 return err("global is immutable");
             }
@@ -448,7 +517,8 @@ mod tests {
 
     #[test]
     fn accepts_valid_code() {
-        check("(module (func (param i32) (result i32) (block (result i32) (br 0 (local.get 0)))))").unwrap();
+        check("(module (func (param i32) (result i32) (block (result i32) (br 0 (local.get 0)))))")
+            .unwrap();
         check("(module (func (result i32) unreachable i32.add))").unwrap();
         check("(module (func (result i32) (br_table 0 0 (i32.const 1) (i32.const 0))))").unwrap();
         check("(module (memory 1) (func (result i64) (i64.load8_u (i32.const 0))))").unwrap();
@@ -456,14 +526,40 @@ mod tests {
 
     #[test]
     fn rejects_invalid_code() {
-        assert_eq!(check("(module (func (result i32) (i64.const 1)))"), Err("type mismatch".into()));
-        assert_eq!(check("(module (func (result i32) (if (result i32) (i32.const 1) (then (i32.const 1)))))"), Err("type mismatch".into()));
+        assert_eq!(
+            check("(module (func (result i32) (i64.const 1)))"),
+            Err("type mismatch".into())
+        );
+        assert_eq!(
+            check(
+                "(module (func (result i32) (if (result i32) (i32.const 1) (then (i32.const 1)))))"
+            ),
+            Err("type mismatch".into())
+        );
         assert_eq!(check("(module (func br 1))"), Err("unknown label".into()));
-        assert_eq!(check("(module (func (i32.load (i32.const 0)) drop))"), Err("unknown memory".into()));
-        assert_eq!(check("(module (global i32 (i32.const 0)) (func (global.set 0 (i32.const 1))))"), Err("global is immutable".into()));
-        assert_eq!(check("(module (memory 1) (func (drop (i32.load8_s align=2 (i32.const 0)))))"), Err("alignment must not be larger than natural".into()));
-        assert_eq!(check("(module (memory 65537))"), Err("memory size must be at most 65536 pages (4GiB)".into()));
-        assert_eq!(check("(module (func (export \"a\")) (func (export \"a\")))"), Err("duplicate export name".into()));
-        assert_eq!(check("(module (global i32 (i32.add (i32.const 1) (i32.const 2))))"), Err("constant expression required".into()));
+        assert_eq!(
+            check("(module (func (i32.load (i32.const 0)) drop))"),
+            Err("unknown memory".into())
+        );
+        assert_eq!(
+            check("(module (global i32 (i32.const 0)) (func (global.set 0 (i32.const 1))))"),
+            Err("global is immutable".into())
+        );
+        assert_eq!(
+            check("(module (memory 1) (func (drop (i32.load8_s align=2 (i32.const 0)))))"),
+            Err("alignment must not be larger than natural".into())
+        );
+        assert_eq!(
+            check("(module (memory 65537))"),
+            Err("memory size must be at most 65536 pages (4GiB)".into())
+        );
+        assert_eq!(
+            check("(module (func (export \"a\")) (func (export \"a\")))"),
+            Err("duplicate export name".into())
+        );
+        assert_eq!(
+            check("(module (global i32 (i32.add (i32.const 1) (i32.const 2))))"),
+            Err("constant expression required".into())
+        );
     }
 }

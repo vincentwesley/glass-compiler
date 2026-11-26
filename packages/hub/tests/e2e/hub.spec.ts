@@ -21,6 +21,7 @@ async function axe(page: Page) {
 const PAGES = [
   { path: './', heading: 'Glass' },
   { path: 'compiler/', heading: 'Glass Compiler' },
+  { path: 'wasm/', heading: 'Glass Wasm' },
 ];
 
 for (const p of PAGES) {
@@ -60,7 +61,7 @@ test('every member is listed; only live ones link anywhere', async ({ page }) =>
   const members = page.locator('.members > li');
   await expect(members).toHaveCount(6);
   await expect(page.locator('.member-planned a')).toHaveCount(0);
-  await expect(page.locator('.member-live')).toHaveCount(1);
+  await expect(page.locator('.member-live')).toHaveCount(2);
 });
 
 test('the hub opens Glass Compiler, and Glass Compiler links back to the series', async ({ page }) => {

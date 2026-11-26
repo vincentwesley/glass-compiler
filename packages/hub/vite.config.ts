@@ -46,6 +46,7 @@ export default defineConfig({
       input: {
         index: fileURLToPath(new URL('index.html', import.meta.url)),
         compiler: fileURLToPath(new URL('compiler/index.html', import.meta.url)),
+        wasm: fileURLToPath(new URL('wasm/index.html', import.meta.url)),
       },
     },
   },

@@ -72,7 +72,12 @@ impl Default for Runner {
 
 impl Runner {
     pub fn new() -> Self {
-        let mut r = Runner { store: Store::default(), registry: HashMap::new(), named: HashMap::new(), current: None };
+        let mut r = Runner {
+            store: Store::default(),
+            registry: HashMap::new(),
+            named: HashMap::new(),
+            current: None,
+        };
         r.add_spectest();
         r
     }
@@ -81,9 +86,17 @@ impl Runner {
     fn add_spectest(&mut self) {
         let s = &mut self.store;
         let mut exports = HashMap::new();
-        let print = |params: Vec<ValType>| FuncType { params, results: vec![] };
+        let print = |params: Vec<ValType>| FuncType {
+            params,
+            results: vec![],
+        };
         let host: HostFn = Rc::new(|store: &mut Store, args: &[Value]| {
-            store.output.push(args.iter().map(|a| a.to_string()).collect::<Vec<_>>().join(" "));
+            store.output.push(
+                args.iter()
+                    .map(|a| a.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" "),
+            );
             Ok(vec![])
         });
         use ValType::*;
@@ -99,13 +112,71 @@ impl Runner {
             let a = s.add_host_func(name, print(params), host.clone());
             exports.insert(name.to_string(), ExternVal::Func(a));
         }
-        exports.insert("global_i32".into(), ExternVal::Global(s.add_global(GlobalType { ty: I32, mutable: false }, Value::I32(666))));
-        exports.insert("global_i64".into(), ExternVal::Global(s.add_global(GlobalType { ty: I64, mutable: false }, Value::I64(666))));
-        exports.insert("global_f32".into(), ExternVal::Global(s.add_global(GlobalType { ty: F32, mutable: false }, Value::F32(666.6f32.to_bits()))));
-        exports.insert("global_f64".into(), ExternVal::Global(s.add_global(GlobalType { ty: F64, mutable: false }, Value::F64(666.6f64.to_bits()))));
-        exports.insert("table".into(), ExternVal::Table(s.add_table(Limits { min: 10, max: Some(20) })));
-        exports.insert("memory".into(), ExternVal::Memory(s.add_memory(Limits { min: 1, max: Some(2) })));
-        let inst = ModuleInst { types: vec![], funcs: vec![], tables: vec![], memories: vec![], globals: vec![], exports };
+        exports.insert(
+            "global_i32".into(),
+            ExternVal::Global(s.add_global(
+                GlobalType {
+                    ty: I32,
+                    mutable: false,
+                },
+                Value::I32(666),
+            )),
+        );
+        exports.insert(
+            "global_i64".into(),
+            ExternVal::Global(s.add_global(
+                GlobalType {
+                    ty: I64,
+                    mutable: false,
+                },
+                Value::I64(666),
+            )),
+        );
+        exports.insert(
+            "global_f32".into(),
+            ExternVal::Global(s.add_global(
+                GlobalType {
+                    ty: F32,
+                    mutable: false,
+                },
+                Value::F32(666.6f32.to_bits()),
+            )),
+        );
+        exports.insert(
+            "global_f64".into(),
+            ExternVal::Global(s.add_global(
+                GlobalType {
+                    ty: F64,
+                    mutable: false,
+                },
+                Value::F64(666.6f64.to_bits()),
+            )),
+        );
+        exports.insert(
+            "table".into(),
+            ExternVal::Table(s.add_table(Limits {
+                min: 10,
+                max: Some(20),
+            })),
+        );
+        exports.insert(
+            "memory".into(),
+            ExternVal::Memory(
+                s.add_memory(Limits {
+                    min: 1,
+                    max: Some(2),
+                })
+                .expect("the spectest memory is one page"),
+            ),
+        );
+        let inst = ModuleInst {
+            types: vec![],
+            funcs: vec![],
+            tables: vec![],
+            memories: vec![],
+            globals: vec![],
+            exports,
+        };
         self.registry.insert("spectest".into(), Rc::new(inst));
     }
 
@@ -113,10 +184,16 @@ impl Runner {
         let mut out = Vec::new();
         for imp in &m.imports {
             let Some(inst) = self.registry.get(&imp.module) else {
-                return Err(Reject::Unlinkable(format!("unknown import {}.{}", imp.module, imp.name)));
+                return Err(Reject::Unlinkable(format!(
+                    "unknown import {}.{}",
+                    imp.module, imp.name
+                )));
             };
             let Some(&v) = inst.exports.get(&imp.name) else {
-                return Err(Reject::Unlinkable(format!("unknown import {}.{}", imp.module, imp.name)));
+                return Err(Reject::Unlinkable(format!(
+                    "unknown import {}.{}",
+                    imp.module, imp.name
+                )));
             };
             out.push(v);
         }
@@ -124,7 +201,11 @@ impl Runner {
     }
 
     /// Decodes or parses, validates and instantiates a `(module …)` form.
-    fn build(&mut self, form: &Sexp, src: &str) -> Result<(Option<String>, Rc<ModuleInst>), Reject> {
+    fn build(
+        &mut self,
+        form: &Sexp,
+        src: &str,
+    ) -> Result<(Option<String>, Rc<ModuleInst>), Reject> {
         let (name, m) = module_of(form, src)?;
         validate(&m).map_err(|e| Reject::Invalid(e.message))?;
         let imports = self.resolve_imports(&m)?;
@@ -147,24 +228,41 @@ impl Runner {
 
     fn instance(&self, name: Option<&str>) -> Result<Rc<ModuleInst>, String> {
         match name {
-            Some(n) => self.named.get(n).cloned().ok_or_else(|| format!("unknown module ${n}")),
-            None => self.current.clone().ok_or_else(|| "no module defined".to_string()),
+            Some(n) => self
+                .named
+                .get(n)
+                .cloned()
+                .ok_or_else(|| format!("unknown module ${n}")),
+            None => self
+                .current
+                .clone()
+                .ok_or_else(|| "no module defined".to_string()),
         }
     }
 
     /// `(invoke $m? "name" args…)` or `(get $m? "name")`.
     fn action(&mut self, a: &Sexp) -> Result<Result<Vec<Value>, Trap>, String> {
         let l = a.list().ok_or("expected an action")?;
-        let kind = l.first().and_then(|h| h.atom()).ok_or("expected an action")?;
+        let kind = l
+            .first()
+            .and_then(|h| h.atom())
+            .ok_or("expected an action")?;
         let mut i = 1;
         let module = l.get(i).and_then(|s| s.id());
         if module.is_some() {
             i += 1;
         }
         let inst = self.instance(module)?;
-        let name = l.get(i).and_then(|s| s.string()).ok_or("expected an export name")?;
+        let name = l
+            .get(i)
+            .and_then(|s| s.string())
+            .ok_or("expected an export name")?;
         let name = String::from_utf8(name.to_vec()).map_err(|_| "bad export name")?;
-        let export = inst.exports.get(&name).copied().ok_or_else(|| format!("unknown export \"{name}\""))?;
+        let export = inst
+            .exports
+            .get(&name)
+            .copied()
+            .ok_or_else(|| format!("unknown export \"{name}\""))?;
         match (kind, export) {
             ("invoke", ExternVal::Func(f)) => {
                 let mut args = Vec::new();
@@ -185,7 +283,11 @@ impl Runner {
             Ok(c) => c,
             Err(e) => {
                 res.failed = 1;
-                res.failures.push(Failure { line: line_of(src, e.offset), command: "script".into(), message: e.message });
+                res.failures.push(Failure {
+                    line: line_of(src, e.offset),
+                    command: "script".into(),
+                    message: e.message,
+                });
                 return res;
             }
         };
@@ -210,7 +312,11 @@ impl Runner {
                 Ok(()) => res.passed += 1,
                 Err(message) => {
                     res.failed += 1;
-                    res.failures.push(Failure { line: line_of(src, c.offset()), command: head, message });
+                    res.failures.push(Failure {
+                        line: line_of(src, c.offset()),
+                        command: head,
+                        message,
+                    });
                 }
             }
         }
@@ -230,9 +336,13 @@ impl Runner {
                 Ok(())
             }
             "register" => {
-                let name = l.get(1).and_then(|s| s.string()).ok_or("register needs a name")?;
+                let name = l
+                    .get(1)
+                    .and_then(|s| s.string())
+                    .ok_or("register needs a name")?;
                 let inst = self.instance(l.get(2).and_then(|s| s.id()))?;
-                self.registry.insert(String::from_utf8_lossy(name).into_owned(), inst);
+                self.registry
+                    .insert(String::from_utf8_lossy(name).into_owned(), inst);
                 Ok(())
             }
             "invoke" | "get" => match self.action(c)? {
@@ -240,13 +350,19 @@ impl Runner {
                 Err(t) => Err(format!("unexpected trap: {}", t.0)),
             },
             "assert_return" => {
-                let got = self.action(l.get(1).ok_or("missing action")?)?.map_err(|t| format!("unexpected trap: {}", t.0))?;
+                let got = self
+                    .action(l.get(1).ok_or("missing action")?)?
+                    .map_err(|t| format!("unexpected trap: {}", t.0))?;
                 let mut want = Vec::new();
                 for e in &l[2..] {
                     want.push(const_value(e)?);
                 }
                 if got.len() != want.len() {
-                    return Err(format!("expected {} results, got {}", want.len(), got.len()));
+                    return Err(format!(
+                        "expected {} results, got {}",
+                        want.len(),
+                        got.len()
+                    ));
                 }
                 for (g, w) in got.iter().zip(&want) {
                     match w {
@@ -258,18 +374,44 @@ impl Runner {
                 Ok(())
             }
             "assert_return_canonical_nan" | "assert_return_arithmetic_nan" => {
-                let got = self.action(l.get(1).ok_or("missing action")?)?.map_err(|t| format!("unexpected trap: {}", t.0))?;
+                let got = self
+                    .action(l.get(1).ok_or("missing action")?)?
+                    .map_err(|t| format!("unexpected trap: {}", t.0))?;
                 let canonical = head.ends_with("canonical_nan");
                 let ok = match got.as_slice() {
-                    [Value::F32(b)] => if canonical { float::is_canonical_nan32(*b) } else { float::is_arithmetic_nan32(*b) },
-                    [Value::F64(b)] => if canonical { float::is_canonical_nan64(*b) } else { float::is_arithmetic_nan64(*b) },
+                    [Value::F32(b)] => {
+                        if canonical {
+                            float::is_canonical_nan32(*b)
+                        } else {
+                            float::is_arithmetic_nan32(*b)
+                        }
+                    }
+                    [Value::F64(b)] => {
+                        if canonical {
+                            float::is_canonical_nan64(*b)
+                        } else {
+                            float::is_arithmetic_nan64(*b)
+                        }
+                    }
                     _ => false,
                 };
-                if ok { Ok(()) } else { Err(format!("expected a {} NaN, got {}", if canonical { "canonical" } else { "arithmetic" }, show(&got))) }
+                if ok {
+                    Ok(())
+                } else {
+                    Err(format!(
+                        "expected a {} NaN, got {}",
+                        if canonical { "canonical" } else { "arithmetic" },
+                        show(&got)
+                    ))
+                }
             }
             "assert_trap" | "assert_exhaustion" => {
                 let target = l.get(1).ok_or("missing action")?;
-                let expected = l.get(2).and_then(|s| s.string()).map(|s| String::from_utf8_lossy(s).into_owned()).unwrap_or_default();
+                let expected = l
+                    .get(2)
+                    .and_then(|s| s.string())
+                    .map(|s| String::from_utf8_lossy(s).into_owned())
+                    .unwrap_or_default();
                 let message = if target.is_form("module") {
                     match self.build(target, src) {
                         Ok(_) => return Err("expected a trap, but the module instantiated".into()),
@@ -278,11 +420,17 @@ impl Runner {
                     }
                 } else {
                     match self.action(target)? {
-                        Ok(v) => return Err(format!("expected trap \"{expected}\", got {}", show(&v))),
+                        Ok(v) => {
+                            return Err(format!("expected trap \"{expected}\", got {}", show(&v)))
+                        }
                         Err(t) => t.0,
                     }
                 };
-                if message.starts_with(&expected) { Ok(()) } else { Err(format!("expected trap \"{expected}\", got \"{message}\"")) }
+                if message.starts_with(&expected) {
+                    Ok(())
+                } else {
+                    Err(format!("expected trap \"{expected}\", got \"{message}\""))
+                }
             }
             "assert_malformed" | "assert_invalid" | "assert_unlinkable" => {
                 let target = l.get(1).ok_or("missing module")?;
@@ -301,16 +449,29 @@ impl Runner {
 }
 
 fn show(v: &[Value]) -> String {
-    if v.is_empty() { "no results".into() } else { v.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ") }
+    if v.is_empty() {
+        "no results".into()
+    } else {
+        v.iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
 }
 
 fn line_of(src: &str, offset: usize) -> usize {
-    src[..offset.min(src.len())].bytes().filter(|&b| b == b'\n').count() + 1
+    src[..offset.min(src.len())]
+        .bytes()
+        .filter(|&b| b == b'\n')
+        .count()
+        + 1
 }
 
 /// `(module $id? …)`, `(module $id? binary "…"*)` or `(module $id? quote "…"*)` to a Module.
 fn module_of(form: &Sexp, src: &str) -> Result<(Option<String>, Module), Reject> {
-    let l = form.list().ok_or_else(|| Reject::Malformed("expected a module".into()))?;
+    let l = form
+        .list()
+        .ok_or_else(|| Reject::Malformed("expected a module".into()))?;
     let mut i = 1;
     let name = l.get(1).and_then(|s| s.id()).map(String::from);
     if name.is_some() {
@@ -319,14 +480,20 @@ fn module_of(form: &Sexp, src: &str) -> Result<(Option<String>, Module), Reject>
     let concat = |items: &[Sexp]| -> Result<Vec<u8>, Reject> {
         let mut out = Vec::new();
         for s in items {
-            out.extend_from_slice(s.string().ok_or_else(|| Reject::Malformed("expected a string".into()))?);
+            out.extend_from_slice(
+                s.string()
+                    .ok_or_else(|| Reject::Malformed("expected a string".into()))?,
+            );
         }
         Ok(out)
     };
     let m = match l.get(i).and_then(|s| s.atom()) {
-        Some("binary") => binary::decode(&concat(&l[i + 1..])?).map_err(|e| Reject::Malformed(e.message))?,
+        Some("binary") => {
+            binary::decode(&concat(&l[i + 1..])?).map_err(|e| Reject::Malformed(e.message))?
+        }
         Some("quote") => {
-            let text = String::from_utf8(concat(&l[i + 1..])?).map_err(|_| Reject::Malformed("malformed UTF-8 encoding".into()))?;
+            let text = String::from_utf8(concat(&l[i + 1..])?)
+                .map_err(|_| Reject::Malformed("malformed UTF-8 encoding".into()))?;
             parse_module_text(&text).map_err(|e| Reject::Malformed(e.message))?
         }
         _ => {
@@ -340,7 +507,9 @@ fn module_of(form: &Sexp, src: &str) -> Result<(Option<String>, Module), Reject>
 /// `(i32.const 1)` etc. `Ok(None)` is a NaN pattern that matches any NaN of that type.
 fn const_value(s: &Sexp) -> Result<Option<Value>, String> {
     let l = s.list().ok_or("expected a constant")?;
-    let (Some(op), Some(arg)) = (l.first().and_then(|h| h.atom()), l.get(1)) else { return Err("expected a constant".into()) };
+    let (Some(op), Some(arg)) = (l.first().and_then(|h| h.atom()), l.get(1)) else {
+        return Err("expected a constant".into());
+    };
     let text = match arg {
         Sexp::Tok(Tok::Atom(a), _) => a.as_str(),
         _ => return Err("expected a number".into()),
