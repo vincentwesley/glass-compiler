@@ -10,6 +10,16 @@ Vendored alongside this file:
   `README.md`, `UPGRADING.md`). Not loaded by the app; this project owns its
   own copies in `src/styles/` and `public/theme-init.js` (see HANDOVER,
   2026-11-18 kit sync). Re-copy from upstream `_house`, never patch them.
+- `vendor/house/credits/`: the house credits card (`credits.html`,
+  `credits.css`, `credits.js`, `creator.webp`, `PROVENANCE.md`). Its
+  `../brand/logo/logo-resize.js` script is not vendored; this repo's draggable
+  sign-off lives in `src/brand/`, so per UPGRADING step 6 leave the card's
+  static logo and "Logo by" block out when using it here.
+- `vendor/house/brand/`: logo SVGs in `svg/` (`name-a` on light, `name-b` on
+  dark = default brand mark; `mark-*` favicon/avatars; `atelier-*`
+  footers/about; `*-c`/`*-d` mono #333 / white), plus `README.md` (usage
+  snippets) and `PROVENANCE.md`.
+- Logo and character art are **all rights reserved**, not MIT; see `NOTICE.md`.
 - `.claude/skills/`: `design-review`, `visual-check`, `ship-batch`.
 
 ## Autonomy and reporting
@@ -46,7 +56,8 @@ Vendored alongside this file:
 - Every UI ends with a credits section at the bottom. Outside portfolio and
   social-hub, the draggable morphing logo (`</>` / `</in>` / `</Atelier>`,
   `--logo-x`, `localStorage["logo-form"]`, Logo radios) lives in that bottom
-  credits section, larger; here that is `src/brand/`.
+  credits section, larger; here that is `src/brand/`. Logo files:
+  `vendor/house/brand/svg/`; credits card: `vendor/house/credits/`.
 - The commissioned logo is all rights reserved (designed by Portus
   Workstation, Instagram @portus_workstation and @wason25_pz; credit them
   wherever it appears). Never recolour, redraw or pixel-ify it, never design
