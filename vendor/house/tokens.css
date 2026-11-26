@@ -1,0 +1,178 @@
+/* House design kit: personal-side palette (dark default, mint light), fonts, hs- helpers. */
+@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-latin-wght-normal.woff2") format("woff2"); font-weight: 300 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Inter"; src: url("fonts/inter-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Silkscreen"; src: url("fonts/silkscreen-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2"); font-weight: 100 800; font-style: normal; font-display: swap; }
+
+:root {
+  --font-head: "Space Grotesk", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-label: "Silkscreen", ui-monospace, monospace; /* pixel accent: eyebrows, badges, chips, "Made by" only */
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  /* Canonical scales: --s1..--s6 and --step--1..--step-4 only (scripts/lint-tokens.mjs enforces it). Do not add duplicates.
+     Mapping for projects that grew their own names (e.g. social-hub: --s-N px scale, --t-* type scale):
+       --s-1 8px -> --s2     --s-2 16px -> --s4     --s-3 24px -> --s5     --s-4 40px -> calc(var(--s6) + var(--s2))   --s-5 64px -> calc(var(--s6) * 2)
+       --t-sm 0.8rem -> --step--1   --t-0 -> --step-0   --t-1 1.25rem -> --step-1   --t-2 1.563rem -> --step-2   --t-hero -> --step-4
+     Projects may keep a local alias block (--s-2: var(--s4);) but never redefine the canonical names. */
+  --s1: 0.25rem; --s2: 0.5rem; --s3: 0.75rem; --s4: 1rem; --s5: 1.5rem; --s6: 2rem;
+  --step--1: clamp(0.8rem, 0.78rem + 0.1vw, 0.875rem);
+  --step-0: 1rem;
+  --step-1: clamp(1.125rem, 1.07rem + 0.27vw, 1.3rem);
+  --step-2: clamp(1.3rem, 1.18rem + 0.6vw, 1.65rem);
+  --step-3: clamp(1.6rem, 1.35rem + 1.2vw, 2.25rem);
+  --step-4: clamp(2rem, 1.5rem + 2.4vw, 3.25rem);
+  --dur-fast: 120ms; --dur-open: 240ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --content-w: 68rem; --header-h: 3.5rem;
+  --z-nav: 10; --z-dialog: 50; --z-toast: 60;
+}
+
+/* Dark is the default (also without JS). */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #11150e;
+  --bg-elev: #1a2015;
+  --fg: #e9f0df;
+  --fg-muted: #aebb9f;
+  --border: #66795a;
+  --border-soft: #2f3a26;
+  --border-strong: #8aa07a;
+  --accent: #4fe0a0;
+  --accent-fg: #04140b;
+  --focus: #7db4ff;
+  --fx-1: #22eaa0;
+  --fx-2: #e9a07f; /* peach */
+  --fx-3: #a996e0; /* lavender */
+  --firefly: #9dff6a;
+  --firefly-core: #eaffb0;
+  --ok: #4fd16f; --ok-fg: #04140b;
+  --warn: #f0c04a; --warn-fg: #1c1400;
+  --danger: #ff8078; --danger-fg: #1f0504;
+  --series-1: var(--accent); --series-2: var(--fx-2); --series-3: var(--fx-3);
+  --series-4: #6fb7ff; --series-5: #f0d060; --series-6: #ff7fa6;
+  /* inventory-slot rarity (3:1 vs --bg, checked by scripts/contrast.mjs) */
+  --rarity-common: #9aaa8c; --rarity-rare: #6fb7ff; --rarity-epic: #a996e0; --rarity-legendary: #f0c04a;
+  /* opt-in (upstreamed 2026-11-18): text-safe peach/lavender inks, tinted "-soft" surfaces, code syntax colours */
+  --fx-2-ink: var(--fx-2); --fx-3-ink: #b8a8ea;
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --fx-2-soft: color-mix(in srgb, var(--fx-2) 18%, transparent);
+  --fx-3-soft: color-mix(in srgb, var(--fx-3) 17%, transparent);
+  --danger-soft: color-mix(in srgb, var(--danger) 14%, transparent);
+  --syntax-keyword: #b8a8ea; --syntax-literal: #e9a07f; --syntax-string: #d9de84;
+  --syntax-name: var(--fg); --syntax-operator: var(--accent); --syntax-punct: var(--fg-muted);
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #eef7f1;
+  --bg-elev: #fbfefc;
+  --fg: #10251a;
+  --fg-muted: #3b5747;
+  --border: #6a957d;
+  --border-soft: #c2dbcb;
+  --border-strong: #3f6b52;
+  --accent: #14673a;
+  --accent-fg: #ffffff;
+  --focus: #1f5fbf;
+  --fx-1: #0a7a54;
+  --fx-2: #b4532a; /* peach, darkened */
+  --fx-3: #6b55b8; /* lavender, darkened */
+  --firefly: #1a7f46;
+  --firefly-core: #1f8a4f;
+  --ok: #1c7a3f; --ok-fg: #ffffff;
+  --warn: #8a5a00; --warn-fg: #ffffff;
+  --danger: #b3261e; --danger-fg: #ffffff;
+  --series-4: #1f5fbf; --series-5: #8a6a00; --series-6: #b3365e;
+  --rarity-common: #3f6b52; --rarity-rare: #1f5fbf; --rarity-epic: #6b55b8; --rarity-legendary: #8a5a00;
+  --fx-2-ink: #9a4320; --fx-3-ink: #573fa6;
+  --syntax-keyword: #573fa6; --syntax-literal: #9a4320; --syntax-string: #5f5a00;
+}
+/* Optional day/night (js/daynight.js sets data-daypart on <html>; opt-in, dark theme only). Only the decorative accents
+   shift a few degrees; --accent, text and border tokens never change, so contrast is untouched. "day" = the defaults. */
+:root[data-daypart="dawn"]:not([data-theme="light"]) { --fx-2: #f2a1a0; --firefly: #ffd27a; }
+:root[data-daypart="dusk"]:not([data-theme="light"]) { --fx-2: #f5a05a; --firefly: #ffb86b; }
+:root[data-daypart="night"]:not([data-theme="light"]) { --fx-2: #b9a8f0; --firefly: #8fd8ff; }
+:root {
+  --fx-ease: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-spring: var(--fx-ease);
+  --fx-step: steps(4, end);
+  --pix: 0 -2px var(--border-strong), 0 2px var(--border-strong), -2px 0 var(--border-strong), 2px 0 var(--border-strong);
+  --fx-card-shadow: 0 -2px var(--accent), 0 2px var(--accent), -2px 0 var(--accent), 2px 0 var(--accent), 4px 4px 0 0 var(--fx-2);
+  --fx-btn-shadow: 3px 3px 0 0 var(--fx-2);
+  /* opt-in (upstreamed 2026-11-18): --glow (portfolio) soft accent halo; --glass (social-hub) near-opaque panel fill
+     + --glass-blur for backdrop-filter; --ease-bounce (social-hub) landing bounce, falls back to --fx-ease. */
+  --glow: color-mix(in srgb, var(--accent) 28%, transparent);
+  --glass: color-mix(in srgb, var(--bg-elev) 96%, transparent); --glass-blur: blur(6px) saturate(1.1);
+  --ease-bounce: var(--fx-ease);
+}
+@supports not (backdrop-filter: blur(1px)) { :root { --glass: var(--bg-elev); --glass-blur: none; } }
+@media (prefers-reduced-transparency: reduce) { :root { --glass: var(--bg-elev); --glass-blur: none; } }
+
+@supports (transition-timing-function: linear(0, 1)) {
+  :root { --ease-spring: linear(0, 0.009, 0.035 2.1%, 0.141, 0.281 6.7%, 0.723 12.9%, 0.938 16.7%, 1.017, 1.077, 1.121, 1.149 24.3%, 1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.8%, 1.051 39.6%, 1.017 43.1%, 0.991, 0.977 51%, 0.974 53.8%, 0.975 57.1%, 0.997 69.8%, 1.003 76.9%, 1);
+    --ease-bounce: linear(0, 0.004, 0.016, 0.035, 0.063, 0.098, 0.141, 0.191, 0.25, 0.316, 0.391, 0.472, 0.562, 0.66, 0.766, 0.879, 1, 0.915, 0.86, 0.836, 0.84, 0.874, 0.938, 1, 0.977, 0.968, 0.974, 0.994, 1); }
+}
+
+/* ---- helpers ---- */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
+img.pixelated, .hs-pixel { image-rendering: pixelated; }
+/* opt-in utilities (social-hub): aligned digits, no ligatures (e.g. "->" or "fi" in code/labels), cap-height trim */
+.hs-tabular { font-variant-numeric: tabular-nums; }
+.hs-no-liga { font-variant-ligatures: none; font-feature-settings: "liga" 0, "clig" 0; }
+@supports (text-box: trim-both cap alphabetic) { .hs-trim { text-box: trim-both cap alphabetic; } }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; box-shadow: 4px 4px 0 0 var(--focus); }
+
+.hs-card {
+  position: relative;
+  padding: 1rem 1.25rem;
+  background: var(--bg-elev);
+  color: var(--fg);
+  border: 0;
+  border-radius: 0;
+  box-shadow: var(--pix);
+}
+.hs-card::before { /* glow fades in; only opacity changes */
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  box-shadow: inset 0 0 0 2px var(--firefly), inset 0 0 1.4rem color-mix(in srgb, var(--firefly) 30%, transparent);
+}
+.hs-card:is(:hover, :focus-within) { box-shadow: var(--fx-card-shadow); }
+.hs-card:is(:hover, :focus-within)::before { opacity: 1; }
+
+.hs-btn {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.55rem 1rem; min-height: 44px;
+  font: 600 1rem var(--font-body);
+  color: var(--accent-fg); background: var(--accent);
+  border: 2px solid var(--accent); border-radius: 0;
+  box-shadow: var(--fx-btn-shadow);
+  cursor: pointer; text-decoration: none;
+}
+.hs-btn:is(:hover, :focus-visible) { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 0 var(--fx-2); }
+.hs-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 0 var(--fx-2); }
+.hs-btn:focus-visible { box-shadow: 4px 4px 0 0 var(--focus); }
+
+.hs-chip {
+  display: inline-flex; align-items: center; padding: 0.2rem 0.6rem;
+  font: 400 0.8rem var(--font-label); letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--fg); background: var(--bg-elev);
+  border: 0; border-radius: 0; box-shadow: var(--pix);
+}
+a.hs-chip, button.hs-chip { cursor: pointer; text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+a.hs-chip:hover, button.hs-chip:hover { color: var(--accent); }
+
+.hs-eyebrow {
+  margin: 0; font: 400 0.8rem var(--font-label);
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-muted);
+}
+.hs-eyebrow::before {
+  content: ""; display: inline-block; width: 0.5em; height: 0.5em; margin-right: 0.6em;
+  background: var(--accent); box-shadow: 0.25em 0.25em 0 var(--fx-2);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hs-card::before { transition: opacity 0.2s; }
+  .hs-btn { transition: transform 0.24s var(--fx-ease), box-shadow 0.24s var(--fx-ease); }
+  .hs-btn:active { transition-duration: 0.05s; }
+}

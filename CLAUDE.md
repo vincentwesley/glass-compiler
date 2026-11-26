@@ -2,7 +2,10 @@
 
 A see-through compiler for the tiny language **Pane**, deployed as a static site
 to GitHub Pages. Read `docs/HANDOVER.md` first when resuming work, then
-`docs/PLAN.md` and `docs/DECISIONS.md`.
+`docs/PLAN.md` and `docs/DECISIONS.md`. Owner-wide rules (house style, brand and
+credits, verification tiers, autonomy) are in `docs/HOUSE-RULES.md`; the house kit
+is vendored in `vendor/house/` and the `design-review`, `visual-check` and
+`ship-batch` skills in `.claude/skills/`.
 
 ## Commands
 

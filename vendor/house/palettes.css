@@ -1,0 +1,11 @@
+/* Optional dark-theme palette variants (upstreamed from social-hub, 2026-11-18). Load after tokens.css.
+   js/theme-init.js sets data-palette on <html> pre-paint from localStorage "palette" (peach | lavender; absent = the
+   default mint-on-forest palette, which this file never touches). Light theme ignores palettes. Checked by scripts/contrast.mjs. */
+:root[data-theme="dark"][data-palette="peach"] {
+  --accent: #e9a07f; --accent-fg: #1a0e06; --fx-1: #e9a07f; --firefly: #e9a07f; --firefly-core: #ffe6d8;
+  --fx-2: #a996e0; --fx-3: #4fe0a0; --border-strong: #85705f;
+}
+:root[data-theme="dark"][data-palette="lavender"] {
+  --accent: #a996e0; --accent-fg: #0e0a1f; --fx-1: #a996e0; --firefly: #a996e0; --firefly-core: #ece6ff;
+  --fx-2: #e9a07f; --fx-3: #4fe0a0; --border-strong: #766c9c;
+}

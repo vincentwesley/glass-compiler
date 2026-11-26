@@ -1,0 +1,237 @@
+/* House components (opt-in, after tokens.css). All classes hs-prefixed. Springy motion only under prefers-reduced-motion: no-preference. */
+
+/* ---- buttons ---- */
+.hs-btn--secondary { color: var(--fg); background: var(--bg-elev); border-color: var(--border-strong); }
+.hs-btn--ghost { color: var(--accent); background: transparent; border-color: transparent; box-shadow: none; }
+.hs-btn--ghost:is(:hover, :focus-visible) { border-color: var(--accent); box-shadow: none; transform: none; }
+.hs-btn--danger { color: var(--danger-fg); background: var(--danger); border-color: var(--danger); }
+.hs-btn--sm { min-height: 44px; padding: 0.3rem 0.7rem; font-size: var(--step--1, 0.875rem); } /* stays 44px tall for touch */
+.hs-btn:active { /* NES-style pressed bevel */
+  box-shadow: inset 3px 3px 0 0 color-mix(in srgb, #000 35%, transparent), inset -3px -3px 0 0 color-mix(in srgb, #fff 18%, transparent);
+}
+.hs-btn:disabled, .hs-btn[aria-disabled="true"] {
+  cursor: not-allowed; opacity: 0.55; transform: none; box-shadow: none;
+  color: var(--fg-muted); background: var(--bg-elev); border-color: var(--border);
+}
+
+/* ---- form fields ---- */
+.hs-input, .hs-select, .hs-textarea {
+  display: block; width: 100%; min-height: 44px; padding: 0.5rem 0.75rem;
+  font: 400 var(--step-0, 1rem) var(--font-body); color: var(--fg); background: var(--bg-elev);
+  border: 2px solid var(--border-strong); border-radius: 0; box-shadow: none;
+}
+.hs-textarea { min-height: 6rem; resize: vertical; }
+.hs-select { appearance: none; padding-right: 2.25rem; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--fg) 50%), linear-gradient(135deg, var(--fg) 50%, transparent 50%);
+  background-position: calc(100% - 1.15rem) 50%, calc(100% - 0.8rem) 50%; background-size: 0.35rem 0.35rem; background-repeat: no-repeat; }
+.hs-input::placeholder, .hs-textarea::placeholder { color: var(--fg-muted); opacity: 1; }
+.hs-input:focus-visible, .hs-select:focus-visible, .hs-textarea:focus-visible { border-color: var(--focus); box-shadow: 4px 4px 0 0 var(--focus); }
+.hs-input:disabled, .hs-select:disabled, .hs-textarea:disabled { opacity: 0.55; cursor: not-allowed; border-color: var(--border); }
+.hs-input:user-invalid, .hs-select:user-invalid, .hs-textarea:user-invalid, [aria-invalid="true"].hs-input, [aria-invalid="true"].hs-select, [aria-invalid="true"].hs-textarea {
+  border-color: var(--danger); box-shadow: 3px 3px 0 0 var(--danger);
+}
+
+/* ---- check: <button class="hs-check" aria-pressed> or <input type="checkbox" class="hs-check"> ---- */
+.hs-check {
+  position: relative; appearance: none; flex: none; display: inline-block; width: 24px; height: 24px; margin: 10px; padding: 0; vertical-align: middle;
+  background: var(--bg-elev); border: 2px solid var(--border-strong); border-radius: 0; cursor: pointer;
+}
+.hs-check::after { /* 44px hit area */
+  content: ""; position: absolute; inset: -11px;
+}
+.hs-check::before { /* pixel tick */
+  content: ""; position: absolute; inset: 3px; background: var(--accent); clip-path: polygon(0 55%, 20% 40%, 40% 60%, 80% 10%, 100% 25%, 40% 90%); opacity: 0;
+}
+.hs-check:is(:checked, [aria-pressed="true"]) { border-color: var(--accent); box-shadow: 2px 2px 0 0 var(--fx-2); }
+.hs-check:is(:checked, [aria-pressed="true"])::before { opacity: 1; }
+.hs-check:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---- skip link + nav ---- */
+.hs-skip {
+  position: fixed; top: var(--s2, 0.5rem); left: var(--s2, 0.5rem); z-index: var(--z-nav, 100);
+  padding: 0.7rem 1rem; font: 600 1rem var(--font-body); color: var(--accent-fg); background: var(--accent); text-decoration: none;
+  transform: translateY(-200%);
+}
+.hs-skip:focus-visible { transform: none; }
+.hs-nav {
+  position: sticky; top: 0; z-index: var(--z-nav, 100); display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2, 0.5rem);
+  min-height: var(--header-h, 56px); padding: 0 var(--s4, 1rem); background: var(--bg-elev); box-shadow: 0 2px 0 0 var(--border-strong);
+}
+.hs-nav a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--s3, 0.75rem); color: var(--fg-muted); font: 600 var(--step-0, 1rem) var(--font-body); text-decoration: none; }
+.hs-nav a:hover { color: var(--fg); }
+.hs-nav a[aria-current="page"] { color: var(--accent); box-shadow: inset 0 -3px 0 0 var(--accent); }
+
+/* ---- toast ---- */
+.hs-toasts {
+  position: fixed; right: var(--s4, 1rem); bottom: var(--s4, 1rem); z-index: var(--z-toast, 300);
+  display: flex; flex-direction: column; gap: var(--s2, 0.5rem); max-width: min(24rem, calc(100vw - 2rem)); pointer-events: none;
+}
+.hs-toast {
+  padding: 0.75rem 1rem; color: var(--fg); background: var(--bg-elev); box-shadow: var(--pix), 4px 4px 0 0 var(--fx-2);
+  font: 400 var(--step-0, 1rem) var(--font-body); pointer-events: auto;
+}
+.hs-toast--ok { box-shadow: var(--pix), 4px 4px 0 0 var(--ok); }
+.hs-toast--warn { box-shadow: var(--pix), 4px 4px 0 0 var(--warn); }
+.hs-toast--danger { box-shadow: var(--pix), 4px 4px 0 0 var(--danger); }
+
+/* ---- banner ---- */
+.hs-banner {
+  --_c: var(--focus); display: flex; gap: var(--s3, 0.75rem); align-items: flex-start; padding: 0.75rem 1rem;
+  color: var(--fg); background: color-mix(in srgb, var(--_c) 14%, var(--bg-elev)); box-shadow: var(--pix), inset 6px 0 0 0 var(--_c);
+  padding-left: 1.5rem; text-wrap: pretty;
+}
+.hs-banner--info { --_c: var(--focus); }
+.hs-banner--ok { --_c: var(--ok); }
+.hs-banner--warn { --_c: var(--warn); }
+.hs-banner--danger { --_c: var(--danger); }
+
+/* ---- skeleton: <div class="hs-skel" aria-hidden="true"><i></i><i></i><i></i></div> ---- */
+.hs-skel { display: grid; gap: 0.75rem; align-content: start; min-height: 6rem; }
+.hs-skel > * { display: block; height: 1rem; background: var(--border); }
+.hs-skel > :nth-child(1) { width: 100%; }
+.hs-skel > :nth-child(2) { width: 75%; }
+.hs-skel > :nth-child(3) { width: 45%; }
+
+/* ---- empty state ---- */
+.hs-empty { display: grid; justify-items: center; gap: var(--s2, 0.5rem); padding: var(--s6, 2.5rem) var(--s4, 1rem); text-align: center; color: var(--fg-muted); text-wrap: balance; box-shadow: var(--pix); }
+.hs-empty > :is(h2, h3, strong) { margin: 0; color: var(--fg); font-family: var(--font-head); }
+
+/* ---- progress: <progress class="hs-progress" max="100" value="40"> ---- */
+.hs-progress { appearance: none; display: block; width: 100%; height: 20px; border: 0; border-radius: 0; color: var(--accent); background: var(--bg-elev); box-shadow: var(--pix); }
+.hs-progress::-webkit-progress-bar { background: var(--bg-elev); }
+.hs-progress::-webkit-progress-value { background: repeating-linear-gradient(90deg, var(--accent) 0 8px, transparent 8px 10px); }
+.hs-progress::-moz-progress-bar { background: repeating-linear-gradient(90deg, var(--accent) 0 8px, transparent 8px 10px); }
+
+/* ---- dialog: native <dialog class="hs-dialog"> ---- */
+.hs-dialog {
+  max-width: min(32rem, calc(100vw - 2rem)); padding: var(--s5, 1.5rem); color: var(--fg); background: var(--bg-elev);
+  border: 0; border-radius: 0; box-shadow: var(--fx-card-shadow); z-index: var(--z-dialog, 200);
+}
+.hs-dialog::backdrop { background: color-mix(in srgb, var(--bg) 80%, transparent); }
+
+/* ---- tabs ---- */
+.hs-tabs [role="tablist"] { display: flex; flex-wrap: wrap; gap: var(--s2, 0.5rem); margin-bottom: var(--s4, 1rem); }
+.hs-tabs [role="tab"] {
+  min-height: 44px; padding: 0 var(--s4, 1rem); font: 400 0.85rem var(--font-label); letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--fg); background: var(--bg-elev); border: 0; border-radius: 0; box-shadow: var(--pix); cursor: pointer;
+}
+.hs-tabs [role="tab"]:hover { color: var(--accent); }
+.hs-tabs [role="tab"][aria-selected="true"] { color: var(--accent-fg); background: var(--accent); box-shadow: 3px 3px 0 0 var(--fx-2); }
+.hs-tabs [role="tabpanel"]:focus-visible { outline-offset: 4px; }
+
+/* ---- notch: stepped corners, for chips (clips box-shadows, so use bg only) ---- */
+.hs-notch {
+  --_n: 4px; padding: 0.3rem 0.8rem; color: var(--fg); background: var(--bg-elev);
+  clip-path: polygon(0 var(--_n), var(--_n) var(--_n), var(--_n) 0, calc(100% - var(--_n)) 0, calc(100% - var(--_n)) var(--_n), 100% var(--_n),
+    100% calc(100% - var(--_n)), calc(100% - var(--_n)) calc(100% - var(--_n)), calc(100% - var(--_n)) 100%, var(--_n) 100%, var(--_n) calc(100% - var(--_n)), 0 calc(100% - var(--_n)));
+}
+
+/* ---- divider: optional motif via --hs-divider-img: url(...) ---- */
+.hs-divider { position: relative; height: 12px; margin: var(--s5, 1.5rem) 0; border: 0; background: none; }
+.hs-divider::before { content: ""; position: absolute; inset: 5px 0 auto; height: 2px;
+  background: linear-gradient(90deg, var(--border-strong) calc(50% - 20px), transparent calc(50% - 20px) calc(50% + 20px), var(--border-strong) calc(50% + 20px)); }
+.hs-divider::after { content: ""; position: absolute; inset: 0 calc(50% - 8px); background: var(--hs-divider-img, none) center / contain no-repeat; }
+
+/* ---- motion (only when allowed) ---- */
+@media (prefers-reduced-motion: no-preference) {
+  .hs-skip { transition: transform var(--dur-fast, 0.12s) var(--ease-out, ease-out); }
+  .hs-check::before { transition: opacity var(--dur-fast, 0.12s); }
+  .hs-skel > * { animation: hs-pulse 1.4s ease-in-out infinite; }
+  .hs-progress::-webkit-progress-value { transition: width var(--dur-open, 0.3s) steps(8, end); }
+  .hs-toast { animation: hs-toast-in 0.3s var(--ease-spring, var(--fx-ease)); }
+  .hs-toast[data-leaving] { animation: hs-toast-out 0.2s var(--ease-out, ease-out) forwards; }
+  .hs-dialog { transition: opacity var(--dur-open, 0.25s) var(--ease-spring, var(--fx-ease)), transform var(--dur-open, 0.25s) var(--ease-spring, var(--fx-ease)), display var(--dur-open, 0.25s) allow-discrete, overlay var(--dur-open, 0.25s) allow-discrete; }
+  .hs-dialog:not([open]) { opacity: 0; transform: translateY(12px) scale(0.96); }
+  .hs-dialog::backdrop { transition: opacity var(--dur-open, 0.25s), display var(--dur-open, 0.25s) allow-discrete, overlay var(--dur-open, 0.25s) allow-discrete; }
+  .hs-dialog:not([open])::backdrop { opacity: 0; }
+  @starting-style {
+    .hs-dialog[open] { opacity: 0; transform: translateY(12px) scale(0.96); }
+    .hs-dialog[open]::backdrop { opacity: 0; }
+  }
+}
+@keyframes hs-pulse { 50% { opacity: 0.45; } }
+@keyframes hs-toast-in { from { opacity: 0; transform: translateY(12px) scale(0.96); } }
+@keyframes hs-toast-out { to { opacity: 0; transform: translateX(16px); } }
+
+/* ---- secondary toggle pressed state (sound toggle etc.) ---- */
+.hs-btn--secondary[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+
+/* ---- brand tint: <article class="hs-card hs-brand brand-x"> with .brand-x { --brand: #xxxxxx; } in YOUR css.
+   RULE: a glyph keeps the platform's official shape and is drawn in an allowed colour only: the official brand colour, or --fg / --bg.
+   Never recolour it with a blend (no color-mix of brand + accent): that misstates the brand. If the official colour fails 3:1 on
+   --bg-elev in one theme, set --brand to var(--fg) for that theme. --brand-ink is the glyph colour; --tint drives ring + glow. ---- */
+.hs-brand { --tint: var(--brand, var(--accent)); --brand-ink: var(--brand, var(--accent)); }
+.hs-brand.hs-card::before { box-shadow: inset 0 0 0 2px var(--tint), inset 0 0 1.4rem color-mix(in srgb, var(--tint) 32%, transparent); }
+.hs-brand.hs-card:is(:hover, :focus-within) { box-shadow: 0 -2px var(--tint), 0 2px var(--tint), -2px 0 var(--tint), 2px 0 var(--tint), 4px 4px 0 0 var(--fx-2); }
+.hs-brand .hs-brand__icon { inline-size: 1.5rem; block-size: 1.5rem; flex: none; color: var(--brand-ink); }
+
+/* ---- pending / "Coming soon" tile: dashed, muted, no link inside ---- */
+.hs-pending { box-shadow: none; outline: 2px dashed var(--border-strong); outline-offset: -2px; color: var(--fg-muted); background: var(--bg); }
+.hs-pending:is(:hover, :focus-within) { box-shadow: none; }
+.hs-pending::before { display: none; }
+.hs-pending :is(h2, h3, h4) { color: var(--fg-muted); }
+
+/* ---- hover power-up: four corner brackets around any box ---- */
+.hs-powerup { position: relative; }
+.hs-powerup::after {
+  content: ""; position: absolute; inset: -2px; pointer-events: none; opacity: 0;
+  background:
+    linear-gradient(var(--accent) 0 0) 0 0 / 12px 2px no-repeat, linear-gradient(var(--accent) 0 0) 0 0 / 2px 12px no-repeat,
+    linear-gradient(var(--accent) 0 0) 100% 0 / 12px 2px no-repeat, linear-gradient(var(--accent) 0 0) 100% 0 / 2px 12px no-repeat,
+    linear-gradient(var(--accent) 0 0) 0 100% / 12px 2px no-repeat, linear-gradient(var(--accent) 0 0) 0 100% / 2px 12px no-repeat,
+    linear-gradient(var(--accent) 0 0) 100% 100% / 12px 2px no-repeat, linear-gradient(var(--accent) 0 0) 100% 100% / 2px 12px no-repeat;
+}
+.hs-powerup:is(:hover, :focus-within)::after { opacity: 1; inset: -6px; }
+
+/* ---- inventory slot: <div class="hs-slot" data-rarity="common|rare|epic|legendary"> (name the rarity in text too, colour is not enough) ---- */
+.hs-slot {
+  --_r: var(--rarity-common); display: grid; place-items: center; inline-size: 3.5rem; block-size: 3.5rem; padding: 0; color: var(--fg);
+  background: var(--bg-elev); box-shadow: 0 0 0 2px var(--_r), inset 0 0 0 4px var(--bg-elev), inset 0 0 0 6px color-mix(in srgb, var(--_r) 60%, transparent);
+}
+.hs-slot[data-rarity="rare"] { --_r: var(--rarity-rare); }
+.hs-slot[data-rarity="epic"] { --_r: var(--rarity-epic); }
+.hs-slot[data-rarity="legendary"] { --_r: var(--rarity-legendary); box-shadow: 0 0 0 2px var(--_r), 0 0 0.9rem color-mix(in srgb, var(--_r) 55%, transparent), inset 0 0 0 4px var(--bg-elev), inset 0 0 0 6px color-mix(in srgb, var(--_r) 60%, transparent); }
+
+/* ---- achievement toast: toast("Unlocked: ...", { kind: "achievement" }) ---- */
+.hs-toast--achievement {
+  display: flex; align-items: center; gap: var(--s3, 0.75rem);
+  box-shadow: var(--pix), 4px 4px 0 0 var(--rarity-legendary);
+}
+.hs-toast--achievement::before {
+  content: ""; flex: none; inline-size: 1.5rem; block-size: 1.5rem; background: var(--rarity-legendary);
+  -webkit-mask: url("icons/star.svg") center / contain no-repeat; mask: url("icons/star.svg") center / contain no-repeat;
+}
+
+/* ---- boot sequence: children of .hs-boot appear one after another (set --i, or rely on nth-child 1..8).
+   Re-trigger by re-inserting the element. Needs @starting-style (all current browsers); older ones just show the content. ---- */
+.hs-boot > :nth-child(1) { --i: 1; } .hs-boot > :nth-child(2) { --i: 2; } .hs-boot > :nth-child(3) { --i: 3; } .hs-boot > :nth-child(4) { --i: 4; }
+.hs-boot > :nth-child(5) { --i: 5; } .hs-boot > :nth-child(6) { --i: 6; } .hs-boot > :nth-child(7) { --i: 7; } .hs-boot > :nth-child(8) { --i: 8; }
+
+/* ---- tilt (fine pointers only): <div class="hs-tilt"> leans toward the viewer on hover. Override --tx / --ty to change the lean. ---- */
+@media (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .hs-tilt { transition: transform 0.3s var(--fx-ease); transform-style: preserve-3d; }
+  .hs-tilt:is(:hover, :focus-within) { transform: perspective(40rem) rotateX(var(--ty, 4deg)) rotateY(var(--tx, -5deg)); }
+}
+
+/* ---- cursor trail dots (js/motion.js initCursorTrail); the container needs position: relative; overflow: hidden ---- */
+.hs-trail-dot { position: absolute; inline-size: 6px; block-size: 6px; margin: -3px 0 0 -3px; pointer-events: none; background: var(--firefly); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .hs-powerup::after { transition: opacity var(--dur-fast, 0.12s), inset var(--dur-open, 0.24s) var(--fx-ease); }
+  .hs-boot > * { transition: opacity 0.4s steps(4, end), translate 0.4s steps(4, end); transition-delay: calc(var(--i, 0) * 120ms); }
+  @starting-style { .hs-boot > * { opacity: 0; translate: 0 10px; } }
+  .hs-trail-dot { animation: hs-trail 0.6s steps(4, end) forwards; }
+}
+@keyframes hs-trail { to { opacity: 0; scale: 0.3; } }
+
+/* Optional: cross-document view transitions (enable per site)
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+}
+*/
+
+/* Logo theme swap (brand/): two <img class="hs-brand-dark|hs-brand-light">. Dark shown by default, light only under data-theme="light"; never follows prefers-color-scheme. (.hs-brand itself is the card tint above.) */
+.hs-brand-dark, .hs-brand-light { display: block; height: 2rem; width: auto; }
+.hs-brand-light { display: none; }
+:root[data-theme="light"] .hs-brand-dark { display: none; }
+:root[data-theme="light"] .hs-brand-light { display: block; }
