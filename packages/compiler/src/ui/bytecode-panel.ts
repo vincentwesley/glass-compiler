@@ -1,5 +1,5 @@
 import { OP_HELP, formatOperand, formatValue, instrKey } from '../lang';
-import { h, resetRoving, revealInPanel, roving } from './dom';
+import { h, resetRoving, revealInPanel, roving } from '@glass/ui/dom';
 import { NodeHighlighter } from './highlight';
 import type { Store } from './store';
 
@@ -96,7 +96,7 @@ export function mountBytecode(body: HTMLElement, count: HTMLElement, help: HTMLE
   store.subscribe((s, prev) => {
     if (s.build !== prev.build) render();
     if (s.build !== prev.build || s.selected !== prev.selected || s.step !== prev.step) {
-      const first = hl.apply(s);
+      const first = hl.sync(s);
       pc?.classList.remove('is-pc');
       const exec = s.links.instrAtStep(s.step);
       pc = exec ? rows.get(instrKey(exec.chunk, exec.ip)) : undefined;
@@ -112,6 +112,6 @@ export function mountBytecode(body: HTMLElement, count: HTMLElement, help: HTMLE
     }
   });
   render();
-  hl.apply(store.state);
+  hl.sync(store.state);
   showHelp();
 }

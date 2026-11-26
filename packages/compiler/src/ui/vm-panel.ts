@@ -1,8 +1,7 @@
 import { formatValue, type Value } from '../lang';
-import { h } from './dom';
+import { h } from '@glass/ui/dom';
+import { createStepper, type StepperView } from '@glass/ui/stepper';
 import type { Store } from './store';
-
-const SPEEDS: Record<string, number> = { slow: 700, normal: 260, fast: 60 };
 
 const valueClass = (v: Value) =>
   v === null ? 'v-nil' : typeof v === 'object' ? 'v-fn' : typeof v === 'string' ? 'v-str' : typeof v === 'number' ? 'v-num' : 'v-bool';
@@ -11,36 +10,17 @@ const valueEl = (v: Value) => h('span', { class: `val ${valueClass(v)}` }, forma
 
 /** Stage 4: the virtual machine, stepping through the recorded trace. */
 export function mountVm(body: HTMLElement, count: HTMLElement, store: Store) {
-  let timer: number | undefined;
-
-  const btn = (label: string, icon: string, onclick: () => void, extra: Record<string, string> = {}) =>
-    h('button', { type: 'button', class: 'btn btn-step', 'aria-label': label, title: label, onclick, ...extra }, h('span', { 'aria-hidden': 'true' }, icon));
-
-  const reset = btn('Back to the start', '⏮', () => store.set({ step: 0, playing: false }));
-  const back = btn('Step back', '◀', () => store.set({ step: Math.max(0, store.state.step - 1), playing: false }), { 'data-testid': 'vm-back' });
-  const fwd = btn('Step forward', '▶', () => store.set({ step: Math.min(store.lastStep(), store.state.step + 1), playing: false }), { 'data-testid': 'vm-step' });
-  const play = h('button', { type: 'button', class: 'btn btn-play', 'aria-pressed': 'false', 'data-testid': 'vm-play', onclick: () => togglePlay() }, 'Play');
-  const end = btn('Jump to the end', '⏭', () => store.set({ step: store.lastStep(), playing: false }));
-  const speed = h(
-    'select',
-    { class: 'select', 'aria-label': 'Playback speed' },
-    h('option', { value: 'slow' }, 'Slow'),
-    h('option', { value: 'normal', selected: true }, 'Normal'),
-    h('option', { value: 'fast' }, 'Fast'),
-  );
-  speed.addEventListener('change', () => {
-    if (store.state.playing) startTimer();
-  });
   const follow = h('input', { type: 'checkbox', id: 'vm-follow', checked: store.state.follow });
   follow.addEventListener('change', () => store.set({ follow: follow.checked }));
 
+  const stepper = createStepper({
+    label: 'Virtual machine controls',
+    scrubLabel: 'VM step',
+    testId: 'vm',
+    extra: [h('label', { class: 'check', for: 'vm-follow' }, follow, h('span', null, 'Follow selection'))],
+    onChange: (change) => store.set(change),
+  });
   const status = h('p', { class: 'vm-status', 'aria-live': 'polite' });
-  const scrub = h('input', { type: 'range', class: 'scrub', min: '0', max: '0', value: '0', 'aria-label': 'VM step', 'data-testid': 'vm-scrub' });
-  scrub.addEventListener('input', () => store.set({ step: Number(scrub.value), playing: false }));
-  const ticks = h('svg', { class: 'ticks', 'aria-hidden': 'true', preserveAspectRatio: 'none', viewBox: '0 0 1000 10' });
-  const tickPath = h('path', { class: 'tick-sel', d: '' });
-  const tickPos = h('path', { class: 'tick-pos', d: '' });
-  ticks.append(tickPath, tickPos);
 
   const stack = h('ol', { class: 'stack', 'aria-label': 'Value stack, top first', reversed: true });
   const frames = h('ol', { class: 'frames', 'aria-label': 'Call frames, innermost last' });
@@ -49,10 +29,9 @@ export function mountVm(body: HTMLElement, count: HTMLElement, store: Store) {
   const errorBox = h('div', { class: 'vm-error', role: 'alert', hidden: true });
 
   body.append(
-    h('div', { class: 'vm-controls', role: 'toolbar', 'aria-label': 'Virtual machine controls' }, reset, back, fwd, play, end, speed,
-      h('label', { class: 'check', for: 'vm-follow' }, follow, h('span', null, 'Follow selection'))),
+    stepper.toolbar,
     status,
-    h('div', { class: 'timeline' }, ticks, scrub),
+    stepper.timeline,
     errorBox,
     h(
       'div',
@@ -77,46 +56,23 @@ export function mountVm(body: HTMLElement, count: HTMLElement, store: Store) {
     if (at) store.select(at.instr.nodeId, 'vm');
   });
 
-  function startTimer() {
-    window.clearInterval(timer);
-    timer = window.setInterval(() => {
-      const s = store.state;
-      if (s.step >= store.lastStep()) store.set({ playing: false });
-      else store.set({ step: s.step + 1 });
-    }, SPEEDS[speed.value] ?? 260);
-  }
-
-  function togglePlay() {
+  const view = (): StepperView => {
     const s = store.state;
-    if (!s.build.trace) return;
-    if (s.playing) store.set({ playing: false });
-    else store.set({ playing: true, step: s.step >= store.lastStep() ? 0 : s.step });
-  }
-
-  const renderTicks = () => {
-    const s = store.state;
-    const last = store.lastStep();
-    const x = (step: number) => (last === 0 ? 0 : (step / last) * 1000);
-    const steps = s.selected !== null ? s.links.stepsForNode(s.selected) : [];
-    tickPath.setAttribute('d', steps.map((st) => `M${x(st).toFixed(1)} 0V10`).join(''));
-    tickPos.setAttribute('d', `M${x(s.step).toFixed(1)} 0V10`);
+    return {
+      step: s.step,
+      last: store.lastStep(),
+      playing: s.playing,
+      enabled: !!s.build.trace,
+      marks: s.selected !== null ? s.links.stepsForNode(s.selected) : [],
+    };
   };
+  const renderTicks = () => stepper.renderTicks(view());
 
   const render = () => {
     const s = store.state;
     const trace = s.build.trace;
     const last = store.lastStep();
-    scrub.max = String(last);
-    scrub.value = String(s.step);
-    const disabled = !trace;
-    for (const b of [reset, back, fwd, play, end]) b.disabled = disabled;
-    scrub.disabled = disabled;
-    back.disabled = disabled || s.step === 0;
-    reset.disabled = back.disabled;
-    fwd.disabled = disabled || s.step >= last;
-    end.disabled = fwd.disabled;
-    play.textContent = s.playing ? 'Pause' : 'Play';
-    play.setAttribute('aria-pressed', String(s.playing));
+    stepper.render(view());
     count.textContent = trace ? String(trace.snapshots.length - 1) : '0';
 
     if (!trace) {
@@ -126,7 +82,6 @@ export function mountVm(body: HTMLElement, count: HTMLElement, store: Store) {
       globals.replaceChildren();
       output.replaceChildren();
       errorBox.hidden = true;
-      renderTicks();
       return;
     }
 
@@ -201,14 +156,9 @@ export function mountVm(body: HTMLElement, count: HTMLElement, store: Store) {
         : lines.map((l) => h('li', { 'data-step': l.step }, h('button', { type: 'button', class: 'out-line', title: `Printed at step ${l.step}` }, l.text)))),
     );
     output.parentElement!.scrollTop = output.parentElement!.scrollHeight;
-    renderTicks();
   };
 
   store.subscribe((s, prev) => {
-    if (s.playing !== prev.playing) {
-      if (s.playing) startTimer();
-      else window.clearInterval(timer);
-    }
     if (s.build !== prev.build || s.step !== prev.step || s.playing !== prev.playing) render();
     else if (s.selected !== prev.selected) renderTicks();
   });

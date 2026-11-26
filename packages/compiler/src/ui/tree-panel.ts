@@ -1,5 +1,5 @@
 import { OPERATOR_TABLE } from '../lang';
-import { h, resetRoving, revealInPanel, roving } from './dom';
+import { h, resetRoving, revealInPanel, roving } from '@glass/ui/dom';
 import { NodeHighlighter } from './highlight';
 import type { Store } from './store';
 import { BOX_HEIGHT, layoutTree } from './tree-layout';
@@ -138,10 +138,10 @@ export function mountTree(body: HTMLElement, count: HTMLElement, tools: HTMLElem
   store.subscribe((s, prev) => {
     if (s.build !== prev.build) render();
     if (s.build !== prev.build || s.selected !== prev.selected || s.step !== prev.step) {
-      const first = hl.apply(s);
+      const first = hl.sync(s);
       if (s.selected !== prev.selected && s.origin !== 'tree') revealInPanel(first);
     }
   });
   render();
-  hl.apply(store.state);
+  hl.sync(store.state);
 }

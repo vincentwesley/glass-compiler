@@ -1,5 +1,5 @@
 import { lineCol, nodeLabel } from '../lang';
-import { h, prefersReducedMotion } from './dom';
+import { h, prefersReducedMotion } from '@glass/ui/dom';
 import { nodeHelp } from './help';
 import type { Store } from './store';
 

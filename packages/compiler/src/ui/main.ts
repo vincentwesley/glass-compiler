@@ -1,29 +1,26 @@
-import '@fontsource/space-grotesk/500.css';
-import '@fontsource/space-grotesk/700.css';
-import '@fontsource/inter/400.css';
-import '@fontsource/inter/600.css';
-import '@fontsource/silkscreen/400.css';
-import '@fontsource/jetbrains-mono/400.css';
-import '@fontsource/jetbrains-mono/700.css';
-import '../styles/tokens.css';
-import '../styles/base.css';
-import '../styles/components.css';
+import '@glass/ui/fonts';
+import '@glass/ui/styles/tokens.css';
+import '@glass/ui/styles/base.css';
+import '@glass/ui/styles/components.css';
+import '@glass/ui/styles/panel.css';
 import '../styles/panels.css';
-import '../brand/logo.css';
-import '../brand/logo-resize';
+import '@glass/ui/styles/debugger.css';
+import '@glass/ui/brand/logo.css';
+import '@glass/ui/brand/logo-resize';
 
 import { build, lineCol } from '../lang';
 import { EXAMPLES } from '../examples';
-import { byId, h } from './dom';
+import { byId, h } from '@glass/ui/dom';
 import { createEditor } from './editor';
 import { mountBytecode } from './bytecode-panel';
 import { mountLineage } from './lineage';
 import { buildLinks } from './links';
 import { Store } from './store';
 import { shareUrl, sourceFromHash } from './share';
-import { mountThemeToggle } from './theme';
+import { mountThemeToggle } from '@glass/ui/theme';
 import { mountTokens } from './tokens-panel';
-import { mountTour } from './tour';
+import { mountTour } from '@glass/ui/tour';
+import { TOUR_DONE_KEY, tourSteps } from './tour-steps';
 import { mountTree } from './tree-panel';
 import { mountVm } from './vm-panel';
 
@@ -218,7 +215,7 @@ function start() {
   mountVm(byId('vm-body'), byId('vm-count'), store);
   mountLineage(byId('lineage'), store);
   mountThemeToggle(byId<HTMLButtonElement>('theme-toggle'));
-  mountTour(store, byId<HTMLButtonElement>('tour-start'));
+  mountTour({ steps: tourSteps(store), startButton: byId<HTMLButtonElement>('tour-start'), doneKey: TOUR_DONE_KEY });
 
   // Exposed read-only for end-to-end tests and curious people in devtools.
   Object.defineProperty(window, '__glass', { value: { get state() { return store.state; } } });

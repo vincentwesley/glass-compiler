@@ -1,23 +1,31 @@
 {
-  "name": "glass-compiler",
+  "name": "glass-series",
   "version": "1.0.0",
   "private": true,
-  "description": "A compiler you can see through: watch Pane code become tokens, a syntax tree, bytecode and a running stack VM.",
+  "description": "The Glass series: computers you can see through. Glass Compiler, Glass Wasm and friends, with a shared debugger kit and one hub site.",
   "license": "MIT",
   "author": "Vin, Vin's Atelier (https://vwesley.dev)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vincentwesley/glass-compiler.git"
+  },
+  "homepage": "https://vincentwesley.github.io/glass-compiler/series/",
   "type": "module",
   "engines": {
     "node": ">=22.12"
   },
+  "workspaces": [
+    "packages/glass-ui",
+    "packages/compiler",
+    "packages/hub"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "dev": "npm run dev -w @glass/compiler",
+    "build": "npm run build --workspaces --if-present && node scripts/assemble-site.mjs",
+    "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:e2e": "playwright test",
+    "test": "npm run test --workspaces --if-present",
+    "test:e2e": "npm run test:e2e --workspaces --if-present",
     "verify": "npm run typecheck && npm run lint && npm test && npm run build"
   },
   "devDependencies": {
@@ -31,15 +39,6 @@
     "typescript-eslint": "^8.72.2",
     "vite": "^8.3.8",
     "vitest": "^5.1.0"
-  },
-  "dependencies": {
-    "@codemirror/commands": "^6.11.1",
-    "@codemirror/state": "^6.7.6",
-    "@codemirror/view": "^6.43.15",
-    "@fontsource/inter": "^5.3.0",
-    "@fontsource/jetbrains-mono": "^5.3.0",
-    "@fontsource/silkscreen": "^5.3.0",
-    "@fontsource/space-grotesk": "^5.3.0"
   },
   "overrides": {
     "playwright-core": "$@playwright/test"

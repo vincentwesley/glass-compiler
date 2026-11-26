@@ -1,78 +1,132 @@
-# Research notes
+# Research: the Glass series
 
-Research done on 2026-10-18 before any code was written. The question was:
-what already exists for "seeing inside" a compiler, which teaching languages
-and parser write-ups are worth borrowing from, and what would make Glass
-Compiler worth using instead.
+Research for turning this repo into the home of the Glass series ("computers you
+can see through"). Glass Compiler's own research notes are in
+[`packages/compiler/docs/RESEARCH.md`](../packages/compiler/docs/RESEARCH.md).
+Collected 2026-11-26. Each link was checked from this session unless it says otherwise.
 
-## Existing compiler and execution visualisers
+## 1. Monorepo tooling for mixed TypeScript and Rust
 
-| Project | What it shows | Take | Avoid |
-| --- | --- | --- | --- |
-| [Compiler Explorer (godbolt.org)](https://godbolt.org/) | Source on the left, assembly on the right, colour bands linking each source line to the instructions it produced. | The *colour link* between source and output is the single most loved feature. We do the same but per **token / tree node**, not per line, and extend it to the running VM. | Line granularity: one line of source can hide many expressions. |
-| [AST Explorer (astexplorer.net)](https://astexplorer.net/) | Parse a file with a real parser, click a node in the tree to highlight its source range and the other way round. | Two-way click linking between source and tree; collapsing big trees. | Shows JSON-ish trees for production grammars: far too much detail for a learner. |
-| [Python Tutor](https://pythontutor.com/) ([SIGCSE 2013 paper](https://pg.ucsd.edu/publications/Online-Python-Tutor-web-based-program-visualization_SIGCSE-2013.pdf)) | Steps through execution one line at a time, forwards *and backwards*, with frames and variables drawn as boxes. | Record a full trace first, then let the user scrub through it ("time travel"). Frames drawn with their locals. | Hides the compiler entirely; you only see source lines, not what the machine actually executes. |
-| [Web-based bytecode interpreter visualisation (JKU Linz, Herber & Weninger)](https://research.jku.at/en/publications/web-based-bytecode-interpreter-visualization/) ([VISSOFT '25 preprint](https://ssw.jku.at/General/Staff/Weninger/Papers/Weninger_VISSOFT_25_Preprint.pdf)) | Source and bytecode side by side, jump/call arrows, forward/backward stepping, animated stack and registers. | Confirms that stepping *bytecode* (not source lines) with stack animation helps students. Jump targets shown explicitly. | Research tool built around existing bytecode formats; no lexer/parser stages. |
-| [danielace1/compiler-visualizer](https://github.com/danielace1/compiler-visualizer) | React app: token table, zoomable AST, three-address code, optimisation, assembly. | Showing every phase on one page. | Phases are separate tabs, not linked to each other; no execution. |
-| [CallumTodd7/compiler-visualization](https://github.com/CallumTodd7/compiler-visualization) | Desktop app animating lexer, parser and x86 code generation. | Animating the lexer's progress through the source. | Desktop only; no execution. |
-| ["Making compiler magic visible" (dev.to)](https://dev.to/sudharsan01/making-compiler-magic-visible-my-interactive-compiler-visualization-tool-5dj0) | Student project with phase-by-phase views. | — | Same "tabs per phase" pattern. |
+- **Two workspaces side by side** is the established pattern. Tauri keeps a Cargo
+  workspace for its crates next to a JS workspace for its packages
+  ([DeepWiki: Tauri monorepo](https://deepwiki.com/tauri-apps/tauri/9.1-monorepo-structure)).
+  Kito does the same
+  ([DeepWiki: Kito](https://deepwiki.com/kitojs/kito/6.1-monorepo-structure)). A
+  template exists at [spa5k/monorepo-typescript-rust](https://github.com/spa5k/monorepo-typescript-rust).
+- **Task runners.** Nx has a Rust plugin that maps build and test onto Cargo
+  ([Nx: polyglot monorepo with Rust](https://nx.dev/blog/polyglot-nx-monorepo-rust-tanstack),
+  [Nx: add Rust](https://nx.dev/docs/kb/add-rust-to-nx-workspace)). Turborepo
+  caches per-package npm scripts ([monorepo.tools](https://monorepo.tools/typescript)).
+  2026 write-ups compare them
+  ([dev.to: Turborepo vs Nx vs Bazel](https://dev.to/zny10289/monorepos-in-2026-turborepo-vs-nx-vs-bazel-what-actually-works-1gco)).
+  Both are worth having at dozens of packages. Here we will have about eight, and the
+  graph is shallow (everything depends on `glass-ui`; three packages depend on the
+  Wasm VM).
+- **Rust to Wasm without wasm-pack.** `cargo build --target wasm32-unknown-unknown`
+  plus a small hand-written loader is enough for a crate that exports plain
+  functions over linear memory. wasm-pack and wasm-bindgen add a second toolchain,
+  and CLI versions must match the crate. They also generate JS glue we would have to
+  audit for CSP. The `wasm32-unknown-unknown` target installs with `rustup target add`
+  (tested in this session).
+- **CSP and WebAssembly.** A page whose CSP has `script-src 'self'` cannot compile
+  Wasm unless the policy adds `'wasm-unsafe-eval'`. That keyword allows
+  WebAssembly only, not JavaScript `eval`
+  ([MDN: script-src](https://developer.mozilla.org/docs/Web/HTTP/Headers/Content-Security-Policy/script-src),
+  [WebAssembly CSP proposal](https://github.com/WebAssembly/content-security-policy/blob/main/proposals/CSP.md),
+  [Chromium intent to ship](https://groups.google.com/a/chromium.org/g/blink-dev/c/5U_SgZ3r8QI/m/pnOzK2S3BAAJ)).
+- **Per-package CI.** GitHub's workflow-level `on.paths` filter skips a whole
+  workflow. [dorny/paths-filter](https://github.com/dorny/paths-filter) gates
+  individual jobs, but it is another third-party action to pin and trust. One
+  workflow per package with native `paths:` does the same job with no extra action.
 
-A project called GLASSBOX turned up in search results with a similar
-architecture (lexer → parser → bytecode → stack VM with a trace). It could not
-be verified and none of its code was looked at or used.
+## 2. Hosting: what a rename would do
 
-### What nobody does (our opportunity)
+- Renaming a repo redirects git and web URLs, **except GitHub Pages project
+  sites** ([GitHub Docs: renaming a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/renaming-a-repository)).
+  This has been true since redirects launched
+  ([GitHub blog, 2013](https://github.blog/news-insights/product-news/repository-redirects-are-here/)).
+  After a rename to `glass`, `vincentwesley.github.io/glass-compiler/` would return 404.
+- Creating a new repo under the old name breaks the repo redirect (same docs page).
+  The community workaround is meta-refresh pages in the user site
+  (`vincentwesley.github.io` repo)
+  ([gist](https://gist.github.com/domenic/1f286d415559b56d725bee51a62c24a7)). A
+  meta refresh drops the `#code=` fragment that Glass Compiler share links carry.
+- **Conclusion:** keep the repo name and the Pages URL. The series lives under
+  `/glass-compiler/` (see DECISIONS S2).
 
-Every tool above shows **one or two** stages, or shows all stages but **not
-linked**. Nothing lets you click a single `+` in your source and see, at the
-same time, the token it was lexed as, the tree node it became, the `ADD`
-instruction it compiled to, and every VM step that executed that instruction.
-That end-to-end lineage is Glass Compiler's reason to exist.
+## 3. How strong multi-project series present themselves
 
-## Teaching languages
+What I took from projects I know well. These are from memory, not re-fetched today:
 
-| Language | Notes | Take | Avoid |
-| --- | --- | --- | --- |
-| Lox — [*Crafting Interpreters*](https://craftinginterpreters.com/) by Robert Nystrom | Tree-walker (jlox) then single-pass bytecode compiler + stack VM (clox). The best free resource on the subject. | Opcode set (`CONSTANT`, `GET_LOCAL`, `JUMP_IF_FALSE`, `LOOP`, `CALL`, `RETURN`), locals as stack slots, call frames whose base points into the value stack. | clox's single-pass compiler **skips the AST** — great for speed, bad for visibility. We keep an explicit tree so it can be drawn. Classes/closures are too much for a first look. |
-| Monkey — [*Writing an Interpreter in Go*](https://interpreterbook.com/) / [*Writing a Compiler in Go*](https://compilerbook.com/) by Thorsten Ball | Pratt parser → AST → bytecode → stack VM. | The pipeline shape (separate lexer, Pratt parser, AST, compiler, VM) is exactly what we want to visualise. | Closures and hash literals: out of scope for the MVP. |
-| [Wren](https://wren.io/) | Small production language with a very readable VM. | Clear naming in opcode listings. | Classes-first design. |
-| Lua | Statement syntax without much punctuation. | `fn`/`while`/`if` with braces feels familiar to JS/Rust/Go learners. | Lua's optional semicolons create parse ambiguities that would be confusing to explain. |
+- **Bartosz Ciechanowski's articles** (ciechanow.ski): every concept is a live
+  figure you can poke, and the prose sits right next to it. The lesson: show, then
+  explain in one sentence.
+- **Nand2Tetris** (nand2tetris.org): one ladder from gates up to an OS, where each
+  rung uses the one below. The lesson for us: make the pipeline visible on the hub
+  as a ladder (Pane → Wasm → Kernel) rather than a grid of unrelated cards.
+- **Crafting Interpreters** (craftinginterpreters.com): one language built twice,
+  with each chapter ending in something runnable. The lesson: every member page opens
+  on a working demo, never a feature list.
+- **The Rust and Bevy organisations' sites**: a calm hub with one card per crate,
+  each showing a status and a version, and consistent chrome everywhere.
+- **Compiler Explorer** (godbolt.org): colour-linked source and output lines. Glass
+  already does this; the series extends it across members ("follow this program").
 
-## Pratt parser write-ups
+Hub design that follows from this: a short pitch, the pipeline ladder, one card per
+member with its live pass count (spec tests, c-testsuite, test ROMs), and honest
+status. Members that aren't built yet show as dashed "pending" tiles with no link
+(house rule).
 
-- Vaughan Pratt, ["Top Down Operator Precedence" (1973)](https://dl.acm.org/doi/10.1145/512927.512931) — the original paper: attach parsing behaviour to tokens, not grammar rules.
-- Douglas Crockford, ["Top Down Operator Precedence"](https://crockford.com/javascript/tdop/tdop.html) — popularised it in JavaScript.
-- Bob Nystrom, ["Pratt Parsers: Expression Parsing Made Easy"](https://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/) — prefix ("nud") and infix ("led") parselets.
-- Alex Kladov (matklad), ["Simple but Powerful Pratt Parsing"](https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html) — the clearest modern version: each operator has a **pair of binding powers** (left, right); left-associativity is `right = left + 1`, right-associativity is `right = left - 1`. One loop, no precedence-climbing tables.
-- Eli Bendersky, ["Top-Down operator precedence parsing"](https://eli.thegreenplace.net/2010/01/02/top-down-operator-precedence-parsing) — worked Python example.
-- [MoonBit: Pratt parser](https://www.moonbitlang.com/blog/pratt-parser) — another binding-power explanation with diagrams.
-- [Cheng & Parreaux, ECOOP 2026](https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.ECOOP.2026.30) — uses Pratt parsing as a pedagogical introduction.
+## 4. Best references per member
 
-**Decision:** follow matklad's binding-power-pair formulation and *show the
-binding-power table in the UI*, so learners can see why `1 + 2 * 3` nests the
-way it does.
+| Member | Scope model and references | Grading |
+| --- | --- | --- |
+| Glass Compiler | Crafting Interpreters (clox), matklad's Pratt parsing (see the package's research) | Unit and known-answer tests |
+| Glass Wasm | [WebAssembly spec](https://webassembly.github.io/spec/core/), [wasmi](https://github.com/wasmi-labs/wasmi) (a Rust interpreter whose definitions closely follow the spec), wasm3 (fast interpreter, but not fully validating) | [WebAssembly/testsuite](https://github.com/WebAssembly/testsuite) (Apache-2.0), pinned at tag `wg-1.0` for the 1.0 feature set |
+| Small C | [chibicc](https://github.com/rui314/chibicc) (scope model), its book draft, the C11 draft N1570 | [c-testsuite](https://github.com/c-testsuite/c-testsuite): runner MIT; test cases carry per-file licences in `.otag` files (checked in `tests/LICENSE`) |
+| Glass Kernel | [xv6-riscv](https://github.com/mit-pdos/xv6-riscv) (scope model) and its book, RISC-V privileged spec (Sv32/Sv39) | Known-answer kernel tests and riscv-tests (licence to check at that milestone) |
+| Glass Console | [Pan Docs](https://gbdev.io/pandocs/), [gbdev test ROM list](https://gbdev.gg8.se/wiki/articles/Test_ROMs), Cowgod's CHIP-8 reference | [Timendus chip8-test-suite](https://github.com/Timendus/chip8-test-suite) (GPL-3.0 per third-party listings; Corax+ is MIT); [Mooneye test suite](https://github.com/Gekkio/mooneye-test-suite); Blargg's tests (licence listed as "mixed" ([GameBrew](https://gamebrew.org/wiki/Blarggs_Gameboy_hardware_test_ROMs_GB)): check before bundling); [mealybug-tearoom-tests](https://github.com/mattcurrie/mealybug-tearoom-tests) |
+| Language Tools | LSP 3.17 spec, rust-analyzer and matklad's resilient-parsing write-up, VS Code extension guide | LSP request/response known-answer tests |
+| Wasm JIT | Cranelift and copy-and-patch papers, `dynasm-rs`, the x86-64 SDM | The same spec testsuite, plus benchmarks against the interpreter |
 
-## Technology notes
+ROM licences decide what we may bundle. For GPL test ROMs we will **fetch them at
+test time** (a pinned submodule) rather than ship them in the site, unless their
+licence allows it. Commercial ROMs are never hosted.
 
-- **CodeMirror 6** injects its base theme through `style-mod`. In a normal
-  document that is a `<style>` element, which a `style-src 'self'` CSP blocks
-  (confirmed in Chromium with Playwright). Inside a shadow root it uses
-  constructable stylesheets instead, which the CSP allows, so the editor is
-  mounted in a shadow root (see `docs/DECISIONS.md`, D11).
-- **GitHub Pages ignores `_headers` files**, so CSP must be a
-  `<meta http-equiv="Content-Security-Policy">` tag. `frame-ancestors` cannot be
-  set from a meta tag; that limitation is accepted.
-- **Fontsource** packages ship `.woff2` files plus the OFL licence; Vite copies
-  them into `dist/assets`, so no Google Fonts request is ever made.
-- **Playwright** in this cloud session has Chromium build 1194 pre-installed,
-  which matches `@playwright/test@1.56.1`; that version is pinned so no browser
-  download is ever needed locally.
+## 5. Running the spec testsuite
 
-## Worth installing later (not needed for the MVP)
+- Most interpreters run the `.wast` scripts after converting them with WABT's
+  `wast2json` ([docs](https://github.com/WebAssembly/wabt/blob/main/docs/wast2json.md),
+  [spectest-interp man page](https://manpages.ubuntu.com/manpages/noble/man1/wast2json.1.html)).
+  WABT release binaries download from this session.
+- **Decision:** Glass Wasm parses `.wast` itself (S-expressions, the text format,
+  and the `assert_*` commands) in Rust. Three reasons:
+  1. The browser page can run the real testsuite files live, with no
+     preprocessing step.
+  2. Text-format `assert_malformed` cases become gradeable too.
+  3. The text parser doubles as the debugger's "show me this module as WAT" view.
 
-- `@vitest/coverage-v8` — coverage reports for the language core.
-- `fast-check` — property-based tests (e.g. "pretty-print → parse round-trips").
-- `@lhci/cli` (Lighthouse CI) — performance/a11y budgets in CI.
-- Running Playwright + axe in CI (would need `npx playwright install chromium`
-  in the workflow, which is fine on GitHub's runners but adds ~1 min).
-- A GitHub Pages custom domain, if one is ever wanted (repo setting, not code).
+  WABT stays an optional cross-check, not a build dependency.
+- Testsuite tags: `wg-1.0` (977f970…) is the 1.0 snapshot; `main` now mixes in
+  2.0 and 3.0 features. Pin `wg-1.0` first, then move forward one proposal at a
+  time (multi-value, sign-extension, bulk memory, and so on).
+
+## 6. Claude Code skills, plugins and MCP servers
+
+Used in this session:
+
+- Vendored skills: `visual-check` (Playwright screenshots, axe, reduced-motion
+  check), `design-review` (critique loop) and `ship-batch` (public-readiness gate).
+- Built-in: `code-review` and `security-review` before each milestone PR, plus the
+  GitHub MCP server for PRs, CI status and merging.
+- Pre-installed Chromium plus Playwright for e2e and screenshots.
+
+Would help, not available here (owner can add them later):
+
+- **chrome-devtools MCP**: Lighthouse audits and performance traces from inside a
+  session (the `visual-check` skill prefers it).
+- **rust-analyzer LSP plugin**: go-to-definition and diagnostics across the Rust
+  crates (cargo check covers us meanwhile).
+- **A context7-style docs MCP**: up-to-date Rust and Vite API docs.
+- **WABT** (`wast2json`, `wat2wasm`, `wasm-objdump`): optional differential checks
+  of the Glass Wasm text parser and encoder.

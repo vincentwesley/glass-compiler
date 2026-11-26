@@ -13,6 +13,6 @@ for (const theme of ['dark', 'light'] as const) {
     await page.locator('[data-testid="examples"]').selectOption('fibonacci');
     await page.locator('.tnode', { hasText: /Binary\s*\+/ }).first().click();
     await page.waitForTimeout(600);
-    await page.screenshot({ path: `docs/screenshots/${info.project.name}-${theme}.png` });
+    await page.screenshot({ path: `../../docs/screenshots/${info.project.name}-${theme}.png` });
   });
 }

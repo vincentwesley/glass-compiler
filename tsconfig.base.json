@@ -15,6 +15,5 @@
     "skipLibCheck": true,
     "noEmit": true,
     "resolveJsonModule": true
-  },
-  "include": ["src", "tests", "vite.config.ts", "playwright.config.ts", "eslint.config.js"]
+  }
 }

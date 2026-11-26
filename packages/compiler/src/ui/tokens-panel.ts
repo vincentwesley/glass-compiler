@@ -1,5 +1,5 @@
 import { tokenCategory } from '../lang';
-import { h, resetRoving, revealInPanel, roving } from './dom';
+import { h, resetRoving, revealInPanel, roving } from '@glass/ui/dom';
 import { NodeHighlighter } from './highlight';
 import type { Store } from './store';
 
@@ -63,10 +63,10 @@ export function mountTokens(body: HTMLElement, count: HTMLElement, store: Store)
   store.subscribe((s, prev) => {
     if (s.build !== prev.build) render();
     if (s.build !== prev.build || s.selected !== prev.selected || s.step !== prev.step) {
-      const first = hl.apply(s);
+      const first = hl.sync(s);
       if (s.selected !== prev.selected && s.origin !== 'tokens') revealInPanel(first);
     }
   });
   render();
-  hl.apply(store.state);
+  hl.sync(store.state);
 }

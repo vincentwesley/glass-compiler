@@ -1,0 +1,26 @@
+{
+  "name": "@glass/ui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The Glass series debugger kit: step controls, timeline, stack and memory panels, lineage highlighting, theme, tour, brand and credits.",
+  "license": "MIT",
+  "author": "Vin, Vin's Atelier (https://vwesley.dev)",
+  "type": "module",
+  "exports": {
+    "./vite": "./vite/glass-pages.ts",
+    "./styles/*": "./styles/*",
+    "./brand/*.css": "./brand/*.css",
+    "./brand/*": "./brand/*.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/silkscreen": "^5.3.0",
+    "@fontsource/space-grotesk": "^5.3.0"
+  }
+}
