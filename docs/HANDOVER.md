@@ -12,8 +12,9 @@ robustness pass) is in `packages/compiler/docs/`.
 | --- | --- | --- |
 | M1 | Restructure into a series monorepo, glass-ui, hub | **Done** (2026-11-26) |
 | M2 + M2b | Glass Wasm: the whole WebAssembly 1.0 testsuite, debugger page | **Done** (2026-11-26) |
-| M3 | Pane → Wasm backend, "Open in Glass Wasm" | Next |
-| M4–M8 | Small C, Glass Console, Glass Kernel, Language Tools, JIT | Planned |
+| M3 | Pane → Wasm backend, "Open in Glass Wasm" | **Done** (2026-11-26) |
+| M4 | Small C | Next |
+| M5–M8 | Glass Console, Glass Kernel, Language Tools, JIT | Planned |
 
 ## M1: what changed
 
@@ -81,6 +82,35 @@ robustness pass) is in `packages/compiler/docs/`.
   lint, typecheck, unit tests and the build. The hub CI and the deploy check out
   submodules and use the pinned Rust toolchain.
 
+## M3: the pipeline, Pane → WebAssembly → Glass Wasm
+
+- **Back end.** `packages/compiler/src/lang/wasm/` holds:
+  - an encoder and a small assembler;
+  - the runtime library (NaN-boxed values, Pane's rules and error messages, in
+    WebAssembly);
+  - the code generator (mirrors the bytecode compiler);
+  - the JavaScript `pane` host.
+
+  Design: DECISIONS S15, with the deliberate differences in S16.
+- **Glass Compiler.**
+  - A fifth stage, WebAssembly, shows the module's Pane functions with decoded
+    constants, linked both ways to tree nodes. The runtime library sits behind a
+    disclosure.
+  - A live check runs the module on the browser's own engine and confirms the
+    same output as the VM. It is skipped for programs that hit the step limit.
+  - An **Open in Glass Wasm** link carries the module in `#wasm=`.
+  - The CSP gains `'wasm-unsafe-eval'` (S8).
+- **Glass Wasm.**
+  - It reads the `name`, `glass.source`, `glass.map` and `glass.globals`
+    sections, and provides the `pane` host (`pane_host.rs`, with JavaScript
+    number formatting ported in `jsnum.rs`).
+  - In compiled-module mode it shows the Pane source, decodes values as Pane
+    values, names globals, links instructions to Pane lines, and links back to
+    "Edit it in Glass Compiler".
+- **Three-way grade.** Every example and error case is identical on the
+  bytecode VM, Node's WebAssembly and Glass Wasm. Number formatting matches
+  JavaScript on 100,000 random values.
+
 ## Verification for M1 (local, 2026-11-26)
 
 - `npm run verify` passes: typecheck, lint, 11 + 167 + 8 unit tests, build.
@@ -107,6 +137,23 @@ robustness pass) is in `packages/compiler/docs/`.
   blockers or highs after fixing the edge-to-edge spec card and the open-blocks
   box.
 
+## Verification for M3 (local, 2026-11-26)
+
+- Unit tests:
+  - Glass Compiler: 251 (84 new for the back end).
+  - Glass Wasm: 27 (crate: 25).
+  - Hub: 8.
+  - glass-ui: 11.
+- e2e:
+  - Glass Compiler: 80 pass (new `wasm-stage.spec.ts`), 4 skipped.
+  - Hub and pipeline: 28 pass.
+  - Glass Wasm: 25 pass.
+- `check:site` passes on 5 pages.
+- `visual-check` on Glass Compiler and Glass Wasm: 0 axe violations, 0
+  off-origin requests, 0 reduced-motion failures.
+- `design-review`: fixed constant comments being cut off on phones and
+  unreadable raw `i64` values in Glass Wasm (now decoded as Pane values).
+
 ## Known issues
 
 - `npm audit` reports moderate advisories in the typescript-eslint dev chain
@@ -132,8 +179,11 @@ robustness pass) is in `packages/compiler/docs/`.
 
 ## Not done, and why
 
-- The Pane → Wasm backend (M3) is next. Small C, Glass Console, Glass Kernel,
-  Language Tools and the JIT are not started; they follow in order (PLAN.md).
+- Small C (M4) is next. Glass Console, Glass Kernel, Language Tools and the JIT
+  are not started; they follow in order (PLAN.md).
+- Pane string ordering in WebAssembly is by code point. It differs from the VM's
+  UTF-16 order only for characters above U+FFFF against U+E000 to U+FFFF
+  (DECISIONS S16).
 - Wasm proposals beyond 1.0 (multi-value, sign extension, bulk memory, SIMD and
   so on): not attempted yet, by design (1.0 first).
 - The "follow this program" view across members needs the Pane → Wasm backend

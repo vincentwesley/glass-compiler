@@ -72,8 +72,16 @@
           <span id="source-status" class="panel-meta" aria-live="polite"></span>
         </header>
         <p id="example-blurb" class="panel-sub"></p>
-        <label class="visually-hidden" for="source">WebAssembly module, text format</label>
+        <label id="source-label" class="visually-hidden" for="source">WebAssembly module, text format</label>
         <textarea id="source" class="wat-editor" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
+        <div id="pane-view" class="pane-view" hidden>
+          <p class="pixel-label">Pane source</p>
+          <pre id="pane-source" class="pane-source" tabindex="0" aria-label="The Pane program this module was compiled from"></pre>
+          <p class="pane-actions">
+            <a id="pane-edit" class="btn btn-small" href="../">Edit it in Glass Compiler</a>
+            <button id="pane-leave" type="button" class="btn btn-small btn-ghost">Write your own module instead</button>
+          </p>
+        </div>
         <p id="source-error" class="diag" role="alert" hidden></p>
         <form id="run-bar" class="run-bar">
           <label class="field">

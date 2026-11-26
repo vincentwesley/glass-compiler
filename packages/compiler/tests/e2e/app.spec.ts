@@ -106,7 +106,7 @@ test('play runs the program', async ({ page }) => {
 test('examples load and run, including recursion', async ({ page }) => {
   await open(page);
   await page.locator('[data-testid="examples"]').selectOption('fibonacci');
-  await expect(page.locator('.chunk-title')).toHaveCount(2);
+  await expect(page.locator('#panel-bytecode .chunk-title')).toHaveCount(2);
   await page.getByRole('button', { name: 'Jump to the end' }).click();
   await expect(page.locator('.output li').last()).toHaveText('fib(7) = 13');
   // Clicking an output line selects the PRINT that produced it.
@@ -258,6 +258,8 @@ test('the guided tour opens on first visit and can be walked or dismissed', asyn
   await expect(tour).toBeVisible();
   await expect(tour).toContainText('Write some Pane');
   for (let i = 0; i < 5; i++) await tour.getByRole('button', { name: 'Next' }).click();
+  await expect(tour).toContainText('WebAssembly');
+  await tour.getByRole('button', { name: 'Next' }).click();
   await expect(tour).toContainText('Everything is linked');
   await expect(page.locator('.tnode.is-selected')).toHaveCount(1);
   await page.keyboard.press('Escape');

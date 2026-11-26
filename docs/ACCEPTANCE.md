@@ -34,9 +34,9 @@ If the sandbox's Chromium build doesn't match Playwright, prefix the e2e runs wi
 
 | Check | Command | Pass means |
 | --- | --- | --- |
-| Unit tests (lexer, parser, compiler, VM, UI logic, README sample, every example's known output) | `npm test -w @glass/compiler` | 167 of 167 pass |
+| Unit tests (lexer, parser, compiler, VM, UI logic, README sample, every example's known output) | `npm test -w @glass/compiler` | 251 of 251 pass (167 for the language and UI, 84 for the WebAssembly back end) |
 | Recorded results are current | `npm run check:results` | `packages/compiler/results.json` matches a fresh run |
-| Browser flows, both themes, 1440px and 375px, axe, CSP | `npm run test:e2e -w @glass/compiler` | 72 pass, 4 skipped on purpose (the README screenshot generator) |
+| Browser flows, both themes, 1440px and 375px, axe, CSP | `npm run test:e2e -w @glass/compiler` | 80 pass, 4 skipped on purpose (the README screenshot generator) |
 | Pixel identity through the M1 restructure | a one-off screenshot diff, recorded in HANDOVER | identical at 1440 and 375, dark and light, before the credits card was added |
 
 ## Hub (`packages/hub`)
@@ -59,6 +59,15 @@ Needs the testsuite submodule: `git submodule update --init --depth 1`.
 | The VM built for the browser | `npm test -w @glass/wasm` | 11 pass: spec scripts run, errors are explained, every example gives its known answer (120, 55, "ssalg" in memory, five printed squares, a jump-table result, a divide-by-zero trap), and replaying to any step agrees with the trace |
 | Debugger flows, both themes, 1440px and 375px | `npm run test:e2e -w @glass/wasm` | 25 pass: axe clean, no console errors, no other origins, no overflow, step forwards and back, recursion frames, instruction ↔ source ↔ timeline linking, keyboard navigation, memory reads and writes, host output, traps, invalid modules, arguments, share links, the page without JavaScript, and **the whole testsuite run in the browser matching the recorded counts** |
 
+## The pipeline: Pane → WebAssembly (M3)
+
+| Check | Command | Pass means |
+| --- | --- | --- |
+| Back end vs bytecode VM on this engine's WebAssembly | `npm test -w @glass/compiler` (`wasm-backend.test.ts`) | 84 pass: every operator and formatting case, all runtime errors with identical text, scope, recursion, call-depth limit, every example and the README sample, UTF-8 source offsets, the 255-parameter limit |
+| The same modules in Glass Wasm | `npm test -w @glass/wasm` (`pane.test.ts`) | every example and error case identical; source map and names decoded; number formatting identical to JavaScript on 100,000 random values |
+| The WebAssembly stage in the browser | `npm run test:e2e -w @glass/compiler` (`wasm-stage.spec.ts`) | live check "same output as the VM", node ↔ instruction linking, errors, no module for broken programs, no native run for runaway programs |
+| Compiler → Glass Wasm → back | `npm run test:e2e -w @glass/hub` (`pipeline.spec.ts`) | the link carries the module; output, traps and Pane-decoded values appear in Glass Wasm; "Edit it in Glass Compiler" returns |
+
 ## Later members
 
 Each gets its section here when its milestone starts, in the same shape: the
@@ -70,5 +79,4 @@ grading suite, the exact command, and what "pass" means.
 | Glass Console | CHIP-8 test ROM results, then the Blargg and Mooneye pass list |
 | Glass Kernel | known-answer system-call tests |
 | Language Tools | LSP request/response tests |
-| Pane → Wasm backend (M3) | every compiler example compiles to Wasm and gives the same output in Glass Wasm and in Node's own WebAssembly |
 | Wasm JIT | the spec testsuite plus benchmarks against the interpreter |

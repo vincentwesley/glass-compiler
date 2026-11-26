@@ -259,6 +259,9 @@ pub struct Module {
     pub start: Option<u32>,
     pub elems: Vec<Elem>,
     pub datas: Vec<Data>,
+    /// Custom sections, by name, in order (the `name` section is also applied to
+    /// funcs; `glass.source` and `glass.map` carry the source a compiler started from).
+    pub customs: Vec<(String, Vec<u8>)>,
 }
 
 impl Module {

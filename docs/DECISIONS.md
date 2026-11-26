@@ -113,8 +113,10 @@ sign-off sits in the card's brand slot. The card's kit token names (`--fg`,
   loader (about 100 lines, unit-tested) wraps it. No wasm-pack or wasm-bindgen
   (RESEARCH §1).
 - Pages that run Wasm add `'wasm-unsafe-eval'` to `script-src`. It allows
-  compiling WebAssembly and nothing else; JavaScript `eval` stays blocked. Pages
-  that don't run Wasm (compiler, hub) keep the exact current policy.
+  compiling WebAssembly and nothing else; JavaScript `eval` stays blocked.
+- Since M3 that includes Glass Compiler, which runs its WebAssembly back end
+  on the browser's own engine to check it matches the VM. The hub keeps the
+  exact original policy, and `check-site` enforces which pages may add it.
 
 ## S9. Glass Wasm reads the official testsuite itself
 
@@ -192,4 +194,53 @@ selection".
   either.
 - Nothing is skipped. If a test is ever skipped, it is listed on the page with
   its reason.
+
+## S15. Pane to WebAssembly: values in the module, five host services
+
+Glass Compiler compiles Pane to a WebAssembly 1.0 module
+(`packages/compiler/src/lang/wasm/`).
+
+- **Values are NaN-boxed `i64`s.**
+  - A number is its own `f64` bits. NaN results are made canonical, so they
+    never collide with a box.
+  - nil, false, true, strings (a pointer to `[len][UTF-8]`), functions (arity
+    and table index) and "not declared yet" are tags in the unused NaN space.
+  - One value type means every Pane function is `(i64…) → i64`, so dynamic
+    calls are a `call_indirect`.
+- **The runtime library lives inside the module.** About 40 small functions
+  (`$rt.add`, `$rt.lt`, `$rt.quote`, …) implement Pane's rules in WebAssembly:
+  types, `+` on text, equality, comparisons, and the VM's exact error messages,
+  JSON-style quoting included. They are visible and steppable in Glass Wasm.
+- **The host provides only:**
+  - the shared memory;
+  - printing a line;
+  - stopping with an error;
+  - formatting a number;
+  - the exact float remainder (WebAssembly 1.0 has no `f64.rem`).
+
+  Number formatting must match JavaScript's `String(n)` and `toPrecision(12)`
+  digit for digit. That is a bignum-sized algorithm, so it belongs in a host
+  library, like libc's printf. Two implementations exist: JavaScript
+  (`host.ts`) and Rust (`pane_host.rs`, `jsnum.rs`). The Rust one is tested
+  against JavaScript on 100,000 random values, ties included.
+- **Debug info** goes in custom sections that any engine ignores:
+  - the standard `name` section;
+  - `glass.source` (the Pane text);
+  - `glass.map` (a UTF-8 source offset for every instruction);
+  - `glass.globals` (Pane's variable names).
+- **Graded three ways.** Every example and every runtime-error case gives
+  identical output and error text on the bytecode VM, on the browser's or
+  Node's own WebAssembly, and on Glass Wasm.
+
+## S16. Where the WebAssembly build may differ from the VM (on purpose)
+
+- **Step limits.** The VM stops at 10,000 steps and Glass Wasm at 200,000, but a
+  browser's own engine has no limit. So Glass Compiler only runs the module on
+  the browser's engine when the VM finished, and a runaway loop can never freeze
+  the tab.
+- **String ordering.** The VM compares strings by UTF-16 code units (JavaScript);
+  the module compares UTF-8 bytes, which is code-point order. They differ only
+  when comparing a character above U+FFFF with one between U+E000 and U+FFFF.
+  Matching JavaScript exactly would need UTF-16 conversion in every comparison,
+  so the difference is documented here instead.
 

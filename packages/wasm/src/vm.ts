@@ -35,6 +35,10 @@ export interface ModuleInfo {
   funcs: FuncInfo[];
   exports: ExportInfo[];
   memories: number;
+  /** The source a compiler embedded (glass.source), e.g. the Pane program. */
+  source: { language: string; text: string } | null;
+  /** Function names in table order. */
+  table: string[];
 }
 
 export interface WasmValue {
@@ -62,7 +66,7 @@ export interface MachineState {
   frames: FrameState[];
   /** Open blocks, loops and ifs; `frame` indexes `frames`, `start` is the pc that opened it. */
   labels: { frame: number; kind: 'block' | 'loop' | 'if'; start: number; height: number; arity: number }[];
-  globals: { mutable: boolean; v: WasmValue }[];
+  globals: { name: string | null; mutable: boolean; v: WasmValue }[];
   memory: { pages: number; bytes: number; last: { addr: number; len: number; write: boolean } | null } | null;
   output: string[];
 }
@@ -78,6 +82,7 @@ interface Exports {
   gw_run(ptr: number, len: number, stopAt: number): number;
   gw_trace(): number;
   gw_memory(offset: number, len: number): number;
+  gw_format_number(x: number): number;
 }
 
 /** The VM itself failed (not the program it was running) and was restarted. */
@@ -187,6 +192,14 @@ export class GlassWasm {
       return this.out();
     });
     return new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.length / 4);
+  }
+
+  /** How Pane prints a number, computed by the VM's host (it must match JavaScript). */
+  formatNumber(x: number): string {
+    return this.guard(() => {
+      this.x.gw_format_number(x);
+      return dec.decode(this.out());
+    });
   }
 
   /** Linear memory as the last run left it. */

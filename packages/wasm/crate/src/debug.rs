@@ -42,6 +42,41 @@ fn value_json(v: &Value) -> String {
     )
 }
 
+/// An unsigned LEB128 number from a custom section.
+fn read_leb(data: &[u8], pos: &mut usize) -> Option<u64> {
+    let mut v: u64 = 0;
+    let mut shift = 0;
+    loop {
+        let b = *data.get(*pos)?;
+        *pos += 1;
+        v |= ((b & 0x7f) as u64) << shift;
+        if b & 0x80 == 0 {
+            return Some(v);
+        }
+        shift += 7;
+        if shift > 28 {
+            return None;
+        }
+    }
+}
+
+/// A length-prefixed UTF-8 string from a custom section.
+fn read_str(data: &[u8], pos: &mut usize) -> Option<String> {
+    let len = read_leb(data, pos)? as usize;
+    let end = pos.checked_add(len)?;
+    let s = std::str::from_utf8(data.get(*pos..end)?).ok()?.to_string();
+    *pos = end;
+    Some(s)
+}
+
+/// `glass.source`: a name (the language) then the source text, both as length-prefixed UTF-8.
+fn parse_source_section(data: &[u8]) -> Option<(String, String)> {
+    let mut pos = 0;
+    let lang = read_str(data, &mut pos)?;
+    let text = read_str(data, &mut pos)?;
+    Some((lang, text))
+}
+
 /// Parses a text-format value like `i32:5`, `f64:-1.5` or plain `5` (typed by `ty`).
 pub fn parse_arg(text: &str, ty: ValType) -> Result<Value, String> {
     let t = text.trim();
@@ -97,6 +132,7 @@ impl Session {
     /// A fresh store and instance (so every run starts from the same state).
     fn reset(&mut self) -> Result<(), String> {
         self.runner = Runner::new();
+        crate::pane_host::install(&mut self.runner, &self.module)?;
         self.inst = Some(self.runner.instantiate_module(&self.module)?);
         self.thread = Thread::default();
         Ok(())
@@ -146,7 +182,11 @@ impl Session {
                             "{{\"depth\":{},\"text\":{},\"offset\":{}}}",
                             l.depth,
                             js(&l.text),
-                            f.offsets.get(pc).map(|o| *o as i64).unwrap_or(-1)
+                            f.offsets
+                                .get(pc)
+                                .filter(|o| **o != u32::MAX)
+                                .map(|o| *o as i64)
+                                .unwrap_or(-1)
                         )
                     })
                     .collect();
@@ -185,11 +225,28 @@ impl Session {
                 )
             })
             .collect();
+        // A module compiled from another language carries its source (glass.source).
+        let source = self
+            .module
+            .customs
+            .iter()
+            .find(|(n, _)| n == "glass.source")
+            .and_then(|(_, data)| parse_source_section(data))
+            .map(|(lang, text)| format!("{{\"language\":{},\"text\":{}}}", js(&lang), js(&text)))
+            .unwrap_or_else(|| "null".into());
+        // Function names in table order (what call_indirect and function values refer to).
+        let table: Vec<String> = self
+            .module
+            .elems
+            .iter()
+            .flat_map(|e| e.init.iter().map(|&f| js(&self.func_name(f))))
+            .collect();
         format!(
-            "{{\"funcs\":[{}],\"exports\":[{}],\"memories\":{}}}",
+            "{{\"funcs\":[{}],\"exports\":[{}],\"memories\":{},\"source\":{source},\"table\":[{}]}}",
             funcs.join(","),
             exports.join(","),
-            self.module.memory_count()
+            self.module.memory_count(),
+            table.join(",")
         )
     }
 
@@ -351,13 +408,19 @@ impl Session {
             })
             .collect();
         let inst = self.inst.as_ref().unwrap();
+        let names = self.global_names();
         let globals: Vec<String> = inst
             .globals
             .iter()
-            .map(|&g| {
+            .enumerate()
+            .map(|(i, &g)| {
                 let gi = &store.globals[g as usize];
+                let name = names
+                    .get(&(i as u32))
+                    .map(|n| js(n))
+                    .unwrap_or_else(|| "null".into());
                 format!(
-                    "{{\"mutable\":{},\"v\":{}}}",
+                    "{{\"name\":{name},\"mutable\":{},\"v\":{}}}",
                     gi.ty.mutable,
                     value_json(&gi.value)
                 )
@@ -396,6 +459,30 @@ impl Session {
             globals.join(","),
             output.join(",")
         )
+    }
+
+    /// Global names a compiler recorded in `glass.globals` (index, name pairs).
+    fn global_names(&self) -> std::collections::HashMap<u32, String> {
+        let mut out = std::collections::HashMap::new();
+        let Some((_, data)) = self
+            .module
+            .customs
+            .iter()
+            .find(|(n, _)| n == "glass.globals")
+        else {
+            return out;
+        };
+        let mut pos = 0;
+        let Some(count) = read_leb(data, &mut pos) else {
+            return out;
+        };
+        for _ in 0..count {
+            let (Some(i), Some(name)) = (read_leb(data, &mut pos), read_str(data, &mut pos)) else {
+                break;
+            };
+            out.insert(i as u32, name);
+        }
+        out
     }
 
     /// Bytes of linear memory from the last run (empty when out of range or no memory).

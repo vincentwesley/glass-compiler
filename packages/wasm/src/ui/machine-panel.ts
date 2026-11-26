@@ -1,13 +1,28 @@
 import { h } from '@glass/ui/dom';
 import { createStepper, type StepperChange, type StepperView } from '@glass/ui/stepper';
 import { stepsFor, type MachineState, type WasmValue } from '../vm';
+import { decodePane, type PaneView } from './pane-values';
 import { key, parseKey, type State, type WasmStore } from './state';
 
-const valueEl = (v: WasmValue) =>
+const rawValueEl = (v: WasmValue) =>
   h('span', { class: `val v-${v.type}`, title: `${v.type} ${v.bits}` }, h('span', { class: 'val-type' }, v.type), ' ', v.value);
 
 /** Stage 2: the interpreter, stepping through the call. */
-export function mountMachine(body: HTMLElement, count: HTMLElement, store: WasmStore, goto: (change: StepperChange) => void, select: (k: string | null) => void) {
+export function mountMachine(
+  body: HTMLElement,
+  count: HTMLElement,
+  store: WasmStore,
+  goto: (change: StepperChange) => void,
+  select: (k: string | null) => void,
+  paneView: () => PaneView | null,
+) {
+  /** A value, shown as Pane prints it when the module came from Pane (raw bits in the tooltip). */
+  const valueEl = (v: WasmValue) => {
+    const view = paneView();
+    const pane = view ? decodePane(v, view) : null;
+    if (!pane) return rawValueEl(v);
+    return h('span', { class: `val v-pane v-${pane.kind}`, title: `Pane ${pane.kind}, stored as i64 ${v.bits}` }, h('span', { class: 'val-type' }, 'pane'), ' ', pane.text);
+  };
   const follow = h('input', { type: 'checkbox', id: 'wasm-follow', checked: store.state.follow });
   follow.addEventListener('change', () => store.set({ follow: follow.checked }));
   const stepper = createStepper({
@@ -146,7 +161,7 @@ export function mountMachine(body: HTMLElement, count: HTMLElement, store: WasmS
     globals.replaceChildren(
       m.globals.length === 0
         ? h('p', { class: 'muted small' }, 'none')
-        : h('dl', { class: 'globals' }, ...m.globals.flatMap((g, i) => [h('dt', null, `${i}${g.mutable ? ' (mut)' : ''}`), h('dd', null, valueEl(g.v))])),
+        : h('dl', { class: 'globals' }, ...m.globals.flatMap((g, i) => [h('dt', null, `${g.name ?? i}${g.mutable ? '' : ' (const)'}`), h('dd', null, g.v.type === 'i64' ? valueEl(g.v) : rawValueEl(g.v))])),
     );
     output.replaceChildren(...(m.output.length === 0 ? [h('li', { class: 'muted small' }, 'nothing printed yet')] : m.output.map((o) => h('li', { class: 'out-text' }, o))));
   };

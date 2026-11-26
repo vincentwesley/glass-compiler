@@ -1,12 +1,22 @@
 import { h, resetRoving, revealInPanel, roving } from '@glass/ui/dom';
 import { Highlighter } from '@glass/ui/highlight';
 import { instrHelp } from './help';
+import { decodePane, type PaneView } from './pane-values';
 import { key, parseKey, type State, type WasmStore } from './state';
 
 /** Stage 1: the validated module's functions, one row per instruction. */
-export function mountCode(body: HTMLElement, count: HTMLElement, help: HTMLElement, store: WasmStore, select: (k: string | null) => void) {
+export function mountCode(body: HTMLElement, count: HTMLElement, help: HTMLElement, store: WasmStore, select: (k: string | null) => void, paneView: () => PaneView | null) {
   const hl = new Highlighter<string>();
   const rows = new Map<string, HTMLElement>();
+
+  /** For a module compiled from Pane, what an i64 constant means. */
+  const constNote = (text: string) => {
+    const view = paneView();
+    const m = /^i64\.const (-?\d+)$/.exec(text);
+    if (!view || !m) return null;
+    const pane = decodePane({ type: 'i64', value: m[1]!, bits: '' }, view);
+    return pane ? h('span', { class: 'code-note' }, ` ;; ${pane.text}`) : null;
+  };
 
   const render = (s: State) => {
     hl.reset();
@@ -33,6 +43,7 @@ export function mountCode(body: HTMLElement, count: HTMLElement, help: HTMLEleme
               { type: 'button', class: `code-line d${Math.min(line.depth, 8)}`, 'data-key': k, tabindex: '-1' },
               h('span', { class: 'code-pc', 'aria-hidden': 'true' }, String(pc).padStart(2, '0')),
               h('span', { class: 'code-text' }, line.text),
+              constNote(line.text),
             );
             hl.add(k, btn);
             rows.set(k, btn);

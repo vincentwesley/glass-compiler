@@ -31,6 +31,10 @@ computers you can see through. Its shared debugger kit lives in
   numbers the Pratt parser uses to decide that `1 + 2 * 3` multiplies first.
 - **Follow the jumps.** Rows that a jump lands on are marked with where the
   jump comes from (`◂ 13`), and selecting a jump highlights its landing row.
+- **See it as WebAssembly.** The fifth stage compiles the same program to a
+  real WebAssembly module. It runs the module on your browser's own engine and
+  checks the output matches the VM. **Open in Glass Wasm** steps through it
+  there, linked back to your Pane code.
 - **Share a program.** *Copy share link* puts your code in the link itself
   (after the `#`), so it never passes through a server.
 - **Learn from examples.** Precedence, variables and scope, a countdown loop,
