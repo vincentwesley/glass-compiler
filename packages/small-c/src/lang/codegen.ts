@@ -138,8 +138,6 @@ export function utf8Offsets(text: string): number[] {
   return out;
 }
 
-const LOAD: Record<string, string> = {};
-const STORE: Record<string, string> = {};
 function loadOp(t: Type): string {
   switch (t.kind) {
     case 'bool':
@@ -177,8 +175,6 @@ function storeOp(t: Type): string {
       return 'i32.store';
   }
 }
-void LOAD;
-void STORE;
 
 /** Bit-fields of bool, unsigned types and enums without negative values read back unsigned. */
 const fieldUnsigned = (m: Member) => m.ty.unsigned || m.ty.kind === 'bool' || (m.ty.kind === 'enum' && !m.ty.hasNegative);
@@ -581,7 +577,7 @@ export function generate(program: Program): WasmOutput {
       const k = addr(n);
       const a = temp('i32');
       at(n, () => emit('local.set', `$${a}`));
-      if (n.kind === 'member' && n.member!.bitWidth !== undefined) return { kind: 'bits', ty: n.ty, member: n.member!, addr: a, offset: k - n.member!.offset + n.member!.offset };
+      if (n.kind === 'member' && n.member!.bitWidth !== undefined) return { kind: 'bits', ty: n.ty, member: n.member!, addr: a, offset: k };
       return { kind: 'mem', ty: n.ty, addr: a, offset: k };
     };
     const memarg = (k: number) => (k ? [`offset=${k}`] : []);
@@ -622,11 +618,6 @@ export function generate(program: Program): WasmOutput {
       base();
       emit(loadOp(unitType(m)), ...memarg(k));
       // Shift the field to the top, then back down (arithmetic for signed fields).
-      const up = bits - m.bitWidth! - m.bitOffset! - (m.ty.size < 4 ? 0 : 0) - (bits - m.ty.size * 8 > 0 ? 0 : 0);
-      const unitBits = m.ty.size * 8;
-      const shl = bits - (m.bitOffset! + m.bitWidth!) - (bits - Math.max(unitBits, 32 === bits ? unitBits : unitBits));
-      void up;
-      void shl;
       const left = bits - m.bitOffset! - m.bitWidth!;
       if (left) {
         constOf(w === 'i64' ? T.llong : T.int, left);
@@ -1094,9 +1085,8 @@ export function generate(program: Program): WasmOutput {
       }
       const rty = def.ret!;
       const sret = rty.kind === 'struct' || rty.kind === 'union';
-      let retSlot = 0;
       if (sret) {
-        retSlot = allocFrame(rty.size, rty.align);
+        const retSlot = allocFrame(rty.size, rty.align);
         emit('local.get', `$${fp}`);
         addOffset(retSlot);
       }

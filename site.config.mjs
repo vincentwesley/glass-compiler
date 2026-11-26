@@ -45,12 +45,12 @@ export const MEMBERS = [
   {
     slug: 'small-c',
     name: 'Small C',
-    status: 'planned',
+    status: 'live',
     path: 'small-c/',
     pkg: 'packages/small-c',
     milestone: 'M4',
-    summary: 'A C-subset compiler to WebAssembly in the spirit of chibicc: tokens, tree and generated Wasm, then run in Glass Wasm.',
-    gradedBy: 'c-testsuite, with every skipped test listed and explained.',
+    summary: 'A compiler for most of C, in the spirit of chibicc: tokens, a typed syntax tree and a real WebAssembly module, with printf and malloc written in C. Its programs run in Glass Wasm.',
+    gradedBy: 'c-testsuite: 220 programs from tcc and scc, run on two engines, with anything that does not pass listed and explained.',
   },
   {
     slug: 'console',

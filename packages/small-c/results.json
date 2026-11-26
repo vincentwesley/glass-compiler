@@ -4,15 +4,15 @@
   "suites": [
     {
       "name": "c-testsuite single-exec, run on Node's WebAssembly",
-      "passed": 219,
-      "failed": 1,
+      "passed": 220,
+      "failed": 0,
       "skipped": 0,
       "total": 220
     },
     {
       "name": "The same programs run on Glass Wasm",
-      "passed": 219,
-      "failed": 1,
+      "passed": 220,
+      "failed": 0,
       "skipped": 0,
       "total": 220
     },
@@ -24,12 +24,6 @@
       "total": 29
     }
   ],
-  "notPassing": [
-    {
-      "name": "00213.c",
-      "outcome": "compile-error",
-      "reason": "00213.c:23: cannot compile this statement (goto)"
-    }
-  ],
+  "notPassing": [],
   "enginesDisagree": []
 }

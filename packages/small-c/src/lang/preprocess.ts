@@ -375,7 +375,7 @@ export function preprocess(file: SourceFile, predefined: Record<string, string> 
       case 'include': {
         const first = line[0];
         let name: string;
-        if (first?.kind === 'str') name = first.text.slice(1, -1);
+        if (first?.kind === 'str' || first?.kind === 'header') name = first.text.slice(1, -1);
         else if (first?.text === '<') {
           const close = line.findIndex((x) => x.text === '>');
           if (close < 0) throw errorAt(first, '#include < has no closing >');

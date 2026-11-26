@@ -96,6 +96,8 @@ export interface Node {
   caseVal?: bigint;
   /** call: the called function's type. */
   fnTy?: Type;
+  /** block: a declaration (its statements are the initialisations). */
+  decl?: boolean;
   /** cast to void etc.: an implicit conversion (not written in the source). */
   implicit?: boolean;
 }

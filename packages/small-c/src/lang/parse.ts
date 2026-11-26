@@ -15,7 +15,6 @@ import {
   isFloat,
   isInteger,
   isNumeric,
-  isPointerLike,
   isScalar,
   pointerTo,
   promote,
@@ -575,7 +574,9 @@ export function parse(tokens: Token[], file: SourceFile, globalsAcross?: Map<str
         break;
       }
       const base = declspec();
-      let { ty, name } = declarator(base, 'maybe');
+      const d = declarator(base, 'maybe');
+      const name = d.name;
+      let ty = d.ty;
       if (ty.kind === 'array') ty = pointerTo(ty.base!);
       else if (ty.kind === 'func') ty = pointerTo(ty);
       if (ty.kind === 'void') throw errorAt(name ?? peek(), 'a parameter cannot have type void');
@@ -818,7 +819,10 @@ export function parse(tokens: Token[], file: SourceFile, globalsAcross?: Map<str
         let a = asInt(n.lhs!);
         let b = asInt(n.rhs!);
         if (b === 0n) throw errorAt(n.tok, 'division by zero in a constant expression');
-        if (n.ty.unsigned) (a = BigInt.asUintN(n.ty.size * 8, a)), (b = BigInt.asUintN(n.ty.size * 8, b));
+        if (n.ty.unsigned) {
+          a = BigInt.asUintN(n.ty.size * 8, a);
+          b = BigInt.asUintN(n.ty.size * 8, b);
+        }
         return int(n.kind === 'div' ? a / b : a % b);
       }
       case 'band':
@@ -991,7 +995,7 @@ export function parse(tokens: Token[], file: SourceFile, globalsAcross?: Map<str
       for (let i = 0; i < Math.min(len, units.length); i++) {
         child(init, i).expr = num(ty.base!.size === 1 ? BigInt.asIntN(8, BigInt(units[i]!)) : BigInt(units[i]!), s, ty.base!);
       }
-      if (braced) consumeEnd() || expect('}');
+      if (braced && !consumeEnd()) expect('}');
       return;
     }
     if (ty.kind === 'array') {
@@ -1111,7 +1115,7 @@ export function parse(tokens: Token[], file: SourceFile, globalsAcross?: Map<str
     if (take('{')) {
       // A scalar in braces: `int x = {3};`
       initializer2(init);
-      consumeEnd() || expect('}');
+      if (!consumeEnd()) expect('}');
       return;
     }
     init.expr = assign();
@@ -1291,14 +1295,12 @@ export function parse(tokens: Token[], file: SourceFile, globalsAcross?: Map<str
       if (take('=')) {
         const init = initializer(ty);
         obj.ty = init.ty;
-        const n = localInit(obj, init, name);
-        span(n, tokens.indexOf(startTok));
-        stmts.push(n);
+        stmts.push(...localInit(obj, init, name).stmts!);
       }
       if (obj.ty.size === 0 && obj.ty.kind === 'array' && obj.ty.len! < 0) throw errorAt(name, `array ${name.text} needs a size or an initializer`);
       if ((obj.ty.kind === 'struct' || obj.ty.kind === 'union') && !obj.ty.complete) throw errorAt(name, `variable ${name.text} has incomplete type ${typeName(obj.ty)}`);
     }
-    return mk('block', startTok, T.void, { stmts });
+    return mk('block', startTok, T.void, { stmts, decl: true });
   };
 
   const findGlobal = (name: string): Obj | undefined => scopes[0]!.vars.get(name)?.obj;
@@ -1463,7 +1465,6 @@ export function parse(tokens: Token[], file: SourceFile, globalsAcross?: Map<str
         case 'return': {
           pos++;
           if (take(';')) {
-            if (fn!.ty.ret!.kind !== 'void' && false) throw errorAt(t, 'return needs a value');
             return span(mk('return', t, T.void), startIdx);
           }
           let e = expr();

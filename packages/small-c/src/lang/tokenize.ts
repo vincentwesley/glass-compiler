@@ -9,7 +9,7 @@ export interface SourceFile {
   user: boolean;
 }
 
-export type TokKind = 'ident' | 'punct' | 'keyword' | 'str' | 'num' | 'char' | 'pp-num' | 'eof';
+export type TokKind = 'ident' | 'punct' | 'keyword' | 'str' | 'num' | 'char' | 'pp-num' | 'header' | 'eof';
 
 export interface Token {
   kind: TokKind;
@@ -158,6 +158,16 @@ export function tokenize(file: SourceFile): Token[] {
       }
       tok('pp-num', start, i);
       continue;
+    }
+    // A header name: <stdio.h> right after #include is one token (C11 6.4.7).
+    if (c === '<' && out.length >= 2 && out[out.length - 1]!.text === 'include' && out[out.length - 2]!.text === '#' && out[out.length - 2]!.atBol) {
+      const close = src.indexOf('>', i);
+      const nl = src.indexOf('\n', i);
+      if (close > 0 && (nl < 0 || close < nl)) {
+        i = close + 1;
+        tok('header', start, i);
+        continue;
+      }
     }
     // String and character literals, with optional L, u, U or u8 prefix.
     const prefix = /^(u8|u|U|L)?["']/.exec(src.slice(i, i + 3));
@@ -311,9 +321,13 @@ export function convertNumber(tok: Token): void {
     const digits = im[1]!;
     let base = 10;
     let body = digits;
-    if (/^0[xX]/.test(digits)) (base = 16), (body = digits.slice(2));
-    else if (/^0[bB]/.test(digits)) (base = 2), (body = digits.slice(2));
-    else if (digits.length > 1 && digits[0] === '0') {
+    if (/^0[xX]/.test(digits)) {
+      base = 16;
+      body = digits.slice(2);
+    } else if (/^0[bB]/.test(digits)) {
+      base = 2;
+      body = digits.slice(2);
+    } else if (digits.length > 1 && digits[0] === '0') {
       base = 8;
       if (/[89]/.test(digits)) throw errorAt(tok, `invalid digit in octal constant ${t}`);
     }

@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run",
-    "testsuite": "node scripts/run-testsuite.ts",
+    "testsuite": "rolldown scripts/run-testsuite.ts -o node_modules/.cache/run-testsuite.mjs --platform node && node node_modules/.cache/run-testsuite.mjs",
     "test:e2e": "playwright test",
     "verify": "npm run typecheck && npm test && npm run build"
   },

@@ -40,22 +40,37 @@ in all 73 core files**, and one button runs them again in your browser.
 
 More in [packages/wasm/README.md](packages/wasm/README.md).
 
+## Small C (live)
+
+**Try it:** https://vincentwesley.github.io/glass-compiler/small-c/
+
+A compiler for most of C, written from scratch in the spirit of chibicc. Type C
+and watch its tokens, its typed syntax tree (with every conversion C makes on
+its own) and the WebAssembly it compiles to, all linked; then run it, or step
+through it in Glass Wasm. printf and malloc are C too, compiled with your
+program. Graded by c-testsuite: **220 of 220 programs pass, on Node's
+WebAssembly and on Glass Wasm**.
+
+![Small C: a linked list in C, its typed syntax tree, its WebAssembly and its output](docs/screenshots/small-c-desktop-dark.png)
+
+More in [packages/small-c/README.md](packages/small-c/README.md).
+
 ## The series
 
 | # | Project | What it is | Graded by | Status |
 | --- | --- | --- | --- | --- |
 | 1 | [Glass Compiler](packages/compiler) | Pane through tokens, syntax tree, bytecode and a stack VM, every stage linked | Unit tests, browser checks with axe | **Live** |
 | 2 | [Glass Wasm](packages/wasm) | A WebAssembly VM from scratch in Rust, with a debugger for the value stack, locals, linear memory and frames | The official WebAssembly spec testsuite: 19,270 / 19,270 | **Live** |
-| 3 | Small C | A C-subset compiler to WebAssembly in the spirit of chibicc, running in Glass Wasm | c-testsuite | Planned (M4) |
+| 3 | [Small C](packages/small-c) | Most of C compiled to WebAssembly in the spirit of chibicc: tokens, typed tree and Wasm, running in Glass Wasm | c-testsuite: 220 / 220 on two engines | **Live** |
 | 4 | Glass Console | CHIP-8, then a Game Boy, with registers, tiles, sprites and the sound channels on show | CHIP-8, Blargg and Mooneye test ROMs | Planned (M5) |
 | 5 | Glass Kernel | A tiny teaching OS on a simulated RISC-V machine | Known-answer system-call tests | Planned (M6) |
 | 6 | Glass Language Tools | A language server for Pane in VS Code and a web playground | LSP request and response tests | Planned (M7) |
 
-They connect. A Pane program compiles to WebAssembly in Glass Compiler. One
-click opens it in the Glass Wasm debugger, with every instruction linked back
-to the Pane code it came from. Later it boots on Glass Kernel. The bytecode VM,
-your browser's WebAssembly and Glass Wasm all give the same output, and that is
-tested. The order, and why, is in
+They connect. A Pane program compiles to WebAssembly in Glass Compiler, and a
+C program in Small C. One click opens either in the Glass Wasm debugger, with
+every instruction linked back to the line it came from. Later they boot on Glass
+Kernel. Every engine (the bytecode VM, your browser's WebAssembly and Glass
+Wasm) gives the same output, and that is tested. The order, and why, is in
 [docs/PLAN.md](docs/PLAN.md).
 
 ## How this repository is laid out
@@ -64,6 +79,8 @@ tested. The order, and why, is in
 packages/glass-ui   the shared debugger kit: step controls, timeline, panels, highlighting, theme, credits
 packages/compiler   Glass Compiler
 packages/wasm       Glass Wasm: crate/ (Rust VM), spec/ (testsuite submodule), the debugger page
+packages/small-c    Small C: src/lang/ (the compiler and its C library), testsuite/ (c-testsuite submodule), the page
+packages/wasm-encode the WebAssembly encoder Glass Compiler and Small C share
 packages/hub        the series site (/glass-compiler/series/)
 site.config.mjs     every page's path and status
 scripts/            site assembly, site checks, recorded test results
@@ -84,7 +101,7 @@ You need Node 24 (see `.nvmrc`) and Rust (pinned in `rust-toolchain.toml`,
 installed by rustup on first use).
 
 ```sh
-git submodule update --init --depth 1   # the WebAssembly testsuite
+git submodule update --init --depth 1   # the WebAssembly testsuite and c-testsuite
 npm ci --ignore-scripts
 npm run dev          # Glass Compiler at http://localhost:5173/glass-compiler/
 npm run verify       # typecheck, lint, unit tests and build for every package

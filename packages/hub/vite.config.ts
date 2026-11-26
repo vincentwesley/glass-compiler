@@ -47,6 +47,7 @@ export default defineConfig({
         index: fileURLToPath(new URL('index.html', import.meta.url)),
         compiler: fileURLToPath(new URL('compiler/index.html', import.meta.url)),
         wasm: fileURLToPath(new URL('wasm/index.html', import.meta.url)),
+        'small-c': fileURLToPath(new URL('small-c/index.html', import.meta.url)),
       },
     },
   },

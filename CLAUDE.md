@@ -32,7 +32,7 @@ Anything that needs the owner goes in `docs/NEEDS-VIN.md`.
 - `node scripts/record-results.mjs <member>`: re-record the results the hub
   shows. Never edit `results.json` by hand.
 - Rust (Glass Wasm): `git submodule update --init --depth 1` once for the
-  testsuite, then `cargo test -p glass-wasm`, `npm run spec -w @glass/wasm`,
+  testsuites (WebAssembly and c-testsuite), then `cargo test -p glass-wasm`, `npm run spec -w @glass/wasm`,
   `cargo fmt --check -p glass-wasm` and
   `cargo clippy -p glass-wasm --all-targets -- -D warnings`. The toolchain is
   pinned in `rust-toolchain.toml`. The page loads the VM built for
@@ -48,6 +48,10 @@ Anything that needs the owner goes in `docs/NEEDS-VIN.md`.
 - `packages/compiler/`: Glass Compiler. `src/lang/` has no DOM imports.
 - `packages/wasm/`: Glass Wasm. `crate/` is the Rust VM (no dependencies),
   `spec/` the testsuite submodule, and `src/` the debugger page.
+- `packages/small-c/`: Small C. `src/lang/` is the compiler (no DOM imports),
+  `libc.ts` the C library in C, `testsuite/` the c-testsuite submodule.
+  `npm run testsuite -w @glass/small-c` grades it.
+- `packages/wasm-encode/`: the WebAssembly encoder shared by both compilers.
 - `packages/hub/`: the series site, rendered from data at build time.
 - `scripts/`: site assembly, site checks, the static server and the results
   recorder.
@@ -56,7 +60,7 @@ Anything that needs the owner goes in `docs/NEEDS-VIN.md`.
 
 - Keep every page's CSP strict: no inline scripts or styles, no third-party
   hosts, no `eval` or `new Function`. Only pages that run WebAssembly may add
-  `'wasm-unsafe-eval'` (DECISIONS S8).
+  `'wasm-unsafe-eval'`, and only Small C `worker-src 'self'` (DECISIONS S8).
 - Dark theme is the default on `:root`; light only via `data-theme="light"`.
 - Colours: bg `#11150e`, accent `#4fe0a0`, peach `#e9a07f`, lavender `#a996e0`
   (as tokens). Fonts: Space Grotesk, Inter, Silkscreen (labels only), JetBrains

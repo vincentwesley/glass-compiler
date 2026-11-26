@@ -13,8 +13,9 @@ robustness pass) is in `packages/compiler/docs/`.
 | M1 | Restructure into a series monorepo, glass-ui, hub | **Done** (2026-11-26) |
 | M2 + M2b | Glass Wasm: the whole WebAssembly 1.0 testsuite, debugger page | **Done** (2026-11-26) |
 | M3 | Pane → Wasm backend, "Open in Glass Wasm" | **Done** (2026-11-26) |
-| M4 | Small C | Next |
-| M5–M8 | Glass Console, Glass Kernel, Language Tools, JIT | Planned |
+| M4 | Small C | **Done** (2026-11-26) |
+| M5 | Glass Console | Next |
+| M6–M8 | Glass Kernel, Language Tools, JIT | Planned |
 
 ## M1: what changed
 
@@ -111,6 +112,48 @@ robustness pass) is in `packages/compiler/docs/`.
   bytecode VM, Node's WebAssembly and Glass Wasm. Number formatting matches
   JavaScript on 100,000 random values.
 
+## M4: Small C
+
+- **The compiler** (`packages/small-c/src/lang/`), in TypeScript, in the shape of
+  chibicc:
+  - a lexer and a preprocessor with hide sets (`#include` of built-in headers,
+    `#`, `##`, `__VA_ARGS__`, `#if`, `#line`, `#pragma push_macro`);
+  - a parser that types every node and makes C's implicit conversions explicit;
+  - a code generator to WebAssembly: named locals for scalars, a stack frame for
+    the rest, structured control flow, and a `br_table` dispatch loop for `goto`
+    and Duff's device (DECISIONS S17, S18).
+- **The C library is C** (`libc.ts`), compiled with each program: printf with
+  exact floating point, malloc, strings, ctype, stdlib, maths (fdlibm kernels),
+  and files in memory. Two host imports: `c.write` and `c.exit` (S19).
+- **Grade:** c-testsuite (pinned submodule): **220 / 220 on Node's WebAssembly and
+  220 / 220 on Glass Wasm**, no skips (S20). `node scripts/record-results.mjs
+  small-c` records both, plus the unit tests.
+- **Page** at `/glass-compiler/small-c/`: editor, tokens, typed tree (implicit
+  conversions marked), WebAssembly (linked both ways), Run (in a worker, stopped
+  after 4 s), grade, share links, tour, Open in Glass Wasm.
+- **Glass Wasm** gained the `c` host (`c_host.rs`), an **Exited** status with the
+  exit code, output that shows lines as they are printed, `gw_run_program` for
+  grading, and C-source mode with "Edit it in Small C". Its step limit went from
+  200,000 to 1,000,000.
+- **Shared:** the Wasm encoder moved to `packages/wasm-encode` (f32 constants,
+  `br_table`, owned exported memory and a table base added, with its own tests).
+- **Hub:** Small C is live, with a member page, its grade and the C row of the
+  pipeline linked. CI: `ci-small-c.yml`.
+
+## Verification for M4 (local, 2026-11-26)
+
+- `npm run verify` passes. Unit tests: glass-ui 11, wasm-encode 6, Glass
+  Compiler 251, Glass Wasm 30 (crate 26), Small C 29, hub 8.
+- c-testsuite 220 / 220 on both engines; `results.json` recorded.
+- `npm run check:site` passes on 7 pages.
+- e2e: Small C 18 pass (2 skipped: the screenshot generator), hub and pipeline
+  32, Glass Wasm 25, Glass Compiler 80 (4 skipped).
+- `visual-check` on the Small C page and its hub page: 0 axe violations, 0
+  off-origin requests, 0 reduced-motion failures in both themes.
+- `design-review`, 2 rounds: fixed touch targets for tree and instruction rows
+  (48px on touch screens) and moved the new spacing onto the kit tokens. Left:
+  the Run panel's output box is mostly empty for short programs (nit).
+
 ## Verification for M1 (local, 2026-11-26)
 
 - `npm run verify` passes: typecheck, lint, 11 + 167 + 8 unit tests, build.
@@ -170,24 +213,30 @@ robustness pass) is in `packages/compiler/docs/`.
 
 - Glass Compiler live at https://vincentwesley.github.io/glass-compiler/, with all
   old links and `#code=` share links unchanged.
-- Glass Wasm: the full WebAssembly 1.0 testsuite passes (19,270 / 19,270), and its
-  debugger page (`/glass-compiler/wasm/`) is built and tested. It goes live when
-  the M2 PR merges.
+- Glass Wasm live at `/glass-compiler/wasm/`: the full WebAssembly 1.0 testsuite
+  passes (19,270 / 19,270), and it debugs compiled Pane and C programs.
+- Pane → WebAssembly in Glass Compiler (M3).
+- Small C at `/glass-compiler/small-c/`: c-testsuite 220 / 220 on two engines.
 - Series monorepo with glass-ui, the hub, per-package CI and the deploy of the
   assembled site.
 - Research, plan, decisions, acceptance checks, notices and owner steps written.
 
 ## Not done, and why
 
-- Small C (M4) is next. Glass Console, Glass Kernel, Language Tools and the JIT
-  are not started; they follow in order (PLAN.md).
+- Glass Console (M5) is next. Glass Kernel, Language Tools and the JIT are not
+  started; they follow in order (PLAN.md).
+- Small C leaves out threads and atomics, `_Complex`, `setjmp`, wide-character
+  library functions, computed goto and `sizeof` of a variable-length array, and
+  `long double` is a `double` (DECISIONS S17). Files exist only in memory until
+  Glass Kernel.
 - Pane string ordering in WebAssembly is by code point. It differs from the VM's
   UTF-16 order only for characters above U+FFFF against U+E000 to U+FFFF
   (DECISIONS S16).
 - Wasm proposals beyond 1.0 (multi-value, sign extension, bulk memory, SIMD and
   so on): not attempted yet, by design (1.0 first).
-- The "follow this program" view across members needs the Pane → Wasm backend
-  (M3) first.
+- The "follow this program" view across members is not built yet: the links
+  between pages exist (Open in Glass Wasm, Edit it in…), a single view that
+  follows one program through every stage waits for Glass Kernel (M6).
 - e2e tests run locally, not in CI. That's a deliberate saving of Actions
   minutes (house rule); CI runs typecheck, lint, unit tests, builds and the site
   check.
@@ -195,4 +244,5 @@ robustness pass) is in `packages/compiler/docs/`.
 ## What needs Vin
 
 - Nothing is required. If `main` has branch protection, update the required
-  check names (NEEDS-VIN.md, Recommended 1).
+  check names, now including **Glass Wasm** and **Small C** (NEEDS-VIN.md,
+  Recommended 1).

@@ -22,6 +22,13 @@ they are added. Their licences are checked again when they land.
 | Vin's Atelier logo (draggable sign-off, `vendor/house/brand/svg/`) | All rights reserved. Designed by Portus Workstation (@portus_workstation / @wason25_pz), see `NOTICE.md` |
 | Credits-card character art (`creator.webp`) | All rights reserved, by the owner, see `NOTICE.md` |
 
+## Code derived from other work
+
+| Item | Licence | Where |
+| --- | --- | --- |
+| Polynomial coefficients and argument reduction constants for `sin`, `cos`, `exp` and `log`, from fdlibm | Copyright (C) 1993 by Sun Microsystems, Inc. "Developed at SunSoft, a Sun Microsystems, Inc. business. Permission to use, copy, modify, and distribute this software is freely granted, provided that this notice is preserved." | Small C's C library (`packages/small-c/src/lang/libc.ts`), compiled into the Small C page |
+| The shape of Small C (its stages and much of its parser's structure) follows [chibicc](https://github.com/rui314/chibicc) by Rui Ueyama | MIT. No code is copied; Small C is written from scratch in TypeScript | `packages/small-c/` |
+
 ## Rust crates
 
 `glass-wasm` has no dependencies: everything is written from scratch.
@@ -40,7 +47,7 @@ they are added. Their licences are checked again when they land.
 | Item | Licence | Status |
 | --- | --- | --- |
 | [WebAssembly spec testsuite](https://github.com/WebAssembly/spec/tree/wg-1.0/test/core) (`test/core` of WebAssembly/spec, tag `wg-1.0`, shallow submodule at `packages/wasm/spec`) | Apache-2.0 (licence in `packages/wasm/spec/test/LICENSE`, served at `/glass-compiler/wasm/licenses/WEBASSEMBLY-TESTSUITE-LICENSE.txt`) | Glass Wasm: the 73 `.wast` files are bundled into the Glass Wasm page so it can run them in the browser |
-| [c-testsuite](https://github.com/c-testsuite/c-testsuite) | Runner MIT (c) 2018 Andrew Chambers; individual test cases carry their own licence in `.otag` files | *planned*, Small C (M4) |
+| [c-testsuite](https://github.com/c-testsuite/c-testsuite) (commit `5c72756`, shallow submodule at `packages/small-c/testsuite`) | Runner and scripts MIT (c) 2018 Andrew Chambers. The test programs keep their origin's licence, named in each `.otags` file: 150 come from [scc](https://git.simple-cc.org/scc) (a permissive MIT/X- and later ISC-style licence) and 69 from [tcc](https://repo.or.cz/tinycc.git) (LGPL-2.1) | Small C: used at test time only. The programs are never copied into the repository or the site; only their names and results are recorded |
 | [Timendus chip8-test-suite](https://github.com/Timendus/chip8-test-suite) | GPL-3.0 (third-party listings; Corax+ test is MIT). Used at test time only, not bundled, unless the licence check at M5 allows it | *planned*, Glass Console (M5) |
 | [Mooneye test suite](https://github.com/Gekkio/mooneye-test-suite), Blargg's Game Boy tests | To verify at M5 (Blargg's tests are listed as "mixed") | *planned*, Glass Console (M5) |
 | Game Boy and CHIP-8 homebrew ROMs | Only freely licensed ones, each credited here with its licence; commercial ROMs are never hosted | *planned*, Glass Console (M5) |

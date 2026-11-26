@@ -68,6 +68,21 @@ Needs the testsuite submodule: `git submodule update --init --depth 1`.
 | The WebAssembly stage in the browser | `npm run test:e2e -w @glass/compiler` (`wasm-stage.spec.ts`) | live check "same output as the VM", node ↔ instruction linking, errors, no module for broken programs, no native run for runaway programs |
 | Compiler → Glass Wasm → back | `npm run test:e2e -w @glass/hub` (`pipeline.spec.ts`) | the link carries the module; output, traps and Pane-decoded values appear in Glass Wasm; "Edit it in Glass Compiler" returns |
 
+## Small C (`packages/small-c`) and the shared encoder (`packages/wasm-encode`)
+
+Needs the testsuite submodule (`git submodule update --init --depth 1`) and, for
+the second engine, Glass Wasm built for the browser (`npm run build:wasm -w @glass/wasm`).
+
+| Check | Command | Pass means |
+| --- | --- | --- |
+| Encoder unit tests | `npm test -w @glass/wasm-encode` | 6 pass: named locals and labels, `br_table`, f32/f64/i64 constants, an exported memory with data, a table starting at 1, custom sections, refusing unknown names |
+| Compiler unit tests | `npm test -w @glass/small-c` | 29 pass: every example's known output, ILP32 integer rules, structs by value, designated initialisers, unions, bit-fields, switch and goto, stdarg, exit status and traps, stack overflow, in-memory files, printf exact against a BigInt reference on 400 random doubles, the preprocessor (hide sets, `#`, `##`, `#if`), errors with line numbers, the shape of the WebAssembly |
+| **c-testsuite** (`tests/single-exec`, 220 programs) | `npm run testsuite -w @glass/small-c` (through `node scripts/record-results.mjs small-c`) | **220 of 220 pass on Node's WebAssembly and 220 of 220 on Glass Wasm**, the two engines agree on every test, nothing skipped (grading rules: DECISIONS S20) |
+| Recorded results are current | `npm run check:results` | `packages/small-c/results.json` matches a fresh run on both engines plus the unit tests |
+| The same programs in Glass Wasm | `npm test -w @glass/wasm` (`c.test.ts`) | every example gives the same output and exit status as on Node; the debugger reports C source, **Exited** with the status, and the lines printed so far |
+| Page flows, both themes, 1440px and 375px | `npm run test:e2e -w @glass/small-c` | 18 pass: axe clean, no console errors, no other origins, no overflow; every example runs to its output; errors point at the line and stop the run; an endless loop is stopped after 4 s; tree ↔ tokens ↔ WebAssembly ↔ source linking; share links; the grade; the page without JavaScript |
+| C → Glass Wasm → back | `npm run test:e2e -w @glass/hub` (`pipeline.spec.ts`) | the link carries the module; Glass Wasm shows the C source, runs it to **Exited, exit status 0** with the output; "Edit it in Small C" returns |
+
 ## Later members
 
 Each gets its section here when its milestone starts, in the same shape: the
@@ -75,7 +90,6 @@ grading suite, the exact command, and what "pass" means.
 
 | Member | Grading suite |
 | --- | --- |
-| Small C | c-testsuite pass count, with every skip listed with a reason |
 | Glass Console | CHIP-8 test ROM results, then the Blargg and Mooneye pass list |
 | Glass Kernel | known-answer system-call tests |
 | Language Tools | LSP request/response tests |

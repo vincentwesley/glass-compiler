@@ -125,7 +125,10 @@ function exactRound(x: number, digits: (exp10: number) => number): { int: bigint
   let m = bits & ((1n << 52n) - 1n);
   let e = Number(bits >> 52n);
   if (e === 0) e = -1074;
-  else (m |= 1n << 52n), (e -= 1075);
+  else {
+    m |= 1n << 52n;
+    e -= 1075;
+  }
   // value = m * 2^e; scaled by 10^k it is num / den.
   const scaled = (k: number) => {
     let num = m * (e > 0 ? 2n ** BigInt(e) : 1n);
