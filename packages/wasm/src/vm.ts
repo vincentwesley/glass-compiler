@@ -78,6 +78,7 @@ interface Exports {
   gw_run(ptr: number, len: number, stopAt: number): number;
   gw_trace(): number;
   gw_memory(offset: number, len: number): number;
+  gw_format_number(x: number): number;
 }
 
 /** The VM itself failed (not the program it was running) and was restarted. */
@@ -187,6 +188,14 @@ export class GlassWasm {
       return this.out();
     });
     return new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.length / 4);
+  }
+
+  /** How Pane prints a number, computed by the VM's host (it must match JavaScript). */
+  formatNumber(x: number): string {
+    return this.guard(() => {
+      this.x.gw_format_number(x);
+      return dec.decode(this.out());
+    });
   }
 
   /** Linear memory as the last run left it. */

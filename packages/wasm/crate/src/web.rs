@@ -191,3 +191,9 @@ pub extern "C" fn gw_memory(offset: u32, len: u32) -> usize {
     });
     set_out(bytes)
 }
+
+/// How Pane prints the number `x` (for the differential tests against JavaScript).
+#[no_mangle]
+pub extern "C" fn gw_format_number(x: f64) -> usize {
+    set_out(crate::jsnum::pane_format(x).into_bytes())
+}

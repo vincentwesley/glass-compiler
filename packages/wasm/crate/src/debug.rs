@@ -42,6 +42,34 @@ fn value_json(v: &Value) -> String {
     )
 }
 
+/// `glass.source`: a name (the language) then the source text, both as length-prefixed UTF-8.
+fn parse_source_section(data: &[u8]) -> Option<(String, String)> {
+    fn read(data: &[u8], pos: &mut usize) -> Option<String> {
+        let mut len: u64 = 0;
+        let mut shift = 0;
+        loop {
+            let b = *data.get(*pos)?;
+            *pos += 1;
+            len |= ((b & 0x7f) as u64) << shift;
+            if b & 0x80 == 0 {
+                break;
+            }
+            shift += 7;
+            if shift > 28 {
+                return None;
+            }
+        }
+        let end = pos.checked_add(len as usize)?;
+        let s = std::str::from_utf8(data.get(*pos..end)?).ok()?.to_string();
+        *pos = end;
+        Some(s)
+    }
+    let mut pos = 0;
+    let lang = read(data, &mut pos)?;
+    let text = read(data, &mut pos)?;
+    Some((lang, text))
+}
+
 /// Parses a text-format value like `i32:5`, `f64:-1.5` or plain `5` (typed by `ty`).
 pub fn parse_arg(text: &str, ty: ValType) -> Result<Value, String> {
     let t = text.trim();
@@ -97,6 +125,7 @@ impl Session {
     /// A fresh store and instance (so every run starts from the same state).
     fn reset(&mut self) -> Result<(), String> {
         self.runner = Runner::new();
+        crate::pane_host::install(&mut self.runner, &self.module)?;
         self.inst = Some(self.runner.instantiate_module(&self.module)?);
         self.thread = Thread::default();
         Ok(())
@@ -146,7 +175,11 @@ impl Session {
                             "{{\"depth\":{},\"text\":{},\"offset\":{}}}",
                             l.depth,
                             js(&l.text),
-                            f.offsets.get(pc).map(|o| *o as i64).unwrap_or(-1)
+                            f.offsets
+                                .get(pc)
+                                .filter(|o| **o != u32::MAX)
+                                .map(|o| *o as i64)
+                                .unwrap_or(-1)
                         )
                     })
                     .collect();
@@ -185,8 +218,17 @@ impl Session {
                 )
             })
             .collect();
+        // A module compiled from another language carries its source (glass.source).
+        let source = self
+            .module
+            .customs
+            .iter()
+            .find(|(n, _)| n == "glass.source")
+            .and_then(|(_, data)| parse_source_section(data))
+            .map(|(lang, text)| format!("{{\"language\":{},\"text\":{}}}", js(&lang), js(&text)))
+            .unwrap_or_else(|| "null".into());
         format!(
-            "{{\"funcs\":[{}],\"exports\":[{}],\"memories\":{}}}",
+            "{{\"funcs\":[{}],\"exports\":[{}],\"memories\":{},\"source\":{source}}}",
             funcs.join(","),
             exports.join(","),
             self.module.memory_count()

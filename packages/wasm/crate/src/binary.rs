@@ -355,7 +355,8 @@ pub fn decode(bytes: &[u8]) -> Result<Module> {
         }
         match id {
             0 => {
-                r.name()?;
+                let name = r.name()?;
+                m.customs.push((name, bytes[r.pos..section_end].to_vec()));
                 r.pos = section_end;
             }
             1 => {
@@ -440,7 +441,9 @@ pub fn decode(bytes: &[u8]) -> Result<Module> {
                     for (n, t) in groups {
                         locals.extend(std::iter::repeat_n(t, n as usize));
                     }
-                    let (mut body, offsets) = r.expr()?;
+                    let (mut body, _byte_offsets) = r.expr()?;
+                    // Positions refer to source text; a binary has none unless glass.map adds them.
+                    let offsets = vec![u32::MAX; body.len()];
                     if r.pos != body_end {
                         return r.err("section size mismatch");
                     }
@@ -490,7 +493,83 @@ pub fn decode(bytes: &[u8]) -> Result<Module> {
     for (f, t) in m.funcs.iter_mut().zip(func_types) {
         f.type_idx = t;
     }
+    apply_debug_sections(&mut m);
     Ok(m)
+}
+
+/// Applies the optional debug custom sections. They are hints: a malformed one is
+/// ignored, never an error, as the spec requires of custom sections.
+fn apply_debug_sections(m: &mut Module) {
+    let sections = m.customs.clone();
+    for (name, data) in &sections {
+        let mut r = Reader {
+            bytes: data,
+            pos: 0,
+            end: data.len(),
+        };
+        let _ = match name.as_str() {
+            "name" => apply_names(m, &mut r),
+            "glass.map" => apply_map(m, &mut r),
+            _ => Ok(()),
+        };
+    }
+}
+
+fn defined_func(m: &mut Module, index: u32) -> Option<&mut Func> {
+    let imported = m.imported(ExternKind::Func) as u32;
+    index
+        .checked_sub(imported)
+        .and_then(move |i| m.funcs.get_mut(i as usize))
+}
+
+/// The standard `name` section: function names (1) and local names (2).
+fn apply_names(m: &mut Module, r: &mut Reader) -> Result<()> {
+    while r.pos < r.end {
+        let id = r.byte()?;
+        let size = r.u32()? as usize;
+        let end = r.pos + size;
+        match id {
+            1 => {
+                for (idx, name) in r.vec(|r| Ok((r.u32()?, r.name()?)))? {
+                    if let Some(f) = defined_func(m, idx) {
+                        f.name = Some(name);
+                    }
+                }
+            }
+            2 => {
+                for (idx, locals) in
+                    r.vec(|r| Ok((r.u32()?, r.vec(|r| Ok((r.u32()?, r.name()?)))?)))?
+                {
+                    let params = m.func_type(idx).map(|t| t.params.len()).unwrap_or(0);
+                    if let Some(f) = defined_func(m, idx) {
+                        let n = params + f.locals.len();
+                        f.local_names = vec![None; n];
+                        for (li, name) in locals {
+                            if let Some(slot) = f.local_names.get_mut(li as usize) {
+                                *slot = Some(name);
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+        r.pos = end;
+    }
+    Ok(())
+}
+
+/// `glass.map`: for some functions, the source byte offset of each instruction
+/// (stored plus one; zero means "no source position").
+fn apply_map(m: &mut Module, r: &mut Reader) -> Result<()> {
+    for (idx, offsets) in r.vec(|r| Ok((r.u32()?, r.vec(|r| r.u32())?)))? {
+        if let Some(f) = defined_func(m, idx) {
+            if offsets.len() == f.body.len() {
+                f.offsets = offsets.into_iter().map(|o| o.wrapping_sub(1)).collect();
+            }
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

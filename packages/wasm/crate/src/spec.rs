@@ -82,6 +82,19 @@ impl Runner {
         r
     }
 
+    /// Makes a host module's exports importable under `name`.
+    pub fn register_host(&mut self, name: &str, exports: HashMap<String, ExternVal>) {
+        let inst = ModuleInst {
+            types: vec![],
+            funcs: vec![],
+            tables: vec![],
+            memories: vec![],
+            globals: vec![],
+            exports,
+        };
+        self.registry.insert(name.to_string(), Rc::new(inst));
+    }
+
     /// The host module every spec script may import from.
     fn add_spectest(&mut self) {
         let s = &mut self.store;
