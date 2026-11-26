@@ -378,6 +378,44 @@ p.title {
   font-family: var(--font-mono);
 }
 
+/* Phones: each suite becomes a block, numbers labelled inline. */
+@media (max-width: 40rem) {
+  .grade-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .grade-table tr {
+    display: grid;
+    grid-template-columns: repeat(4, auto);
+    justify-content: start;
+    gap: var(--s1) var(--s4);
+    padding: var(--s3) 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .grade-table th,
+  .grade-table td {
+    padding: 0;
+    border: 0;
+    text-align: left;
+  }
+
+  .grade-table th {
+    grid-column: 1 / -1;
+  }
+
+  .grade-table td::before {
+    content: attr(data-label) ' ';
+    color: var(--ink-dim);
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+  }
+}
+
 .hub-member .hub-section > p {
   max-width: 70ch;
 }
@@ -390,4 +428,8 @@ p.title {
   .pipe-stop > a:hover {
     transform: none;
   }
+}
+
+.table-wrap + p {
+  margin-top: var(--s3);
 }

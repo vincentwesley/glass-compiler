@@ -16,7 +16,7 @@ const mounts = [
   { from: join(root, 'packages/hub/dist'), at: HUB_PATH, name: 'hub' },
 ];
 
-// Mount the root last-checked: a member mounted at '' must not own a folder another member mounts into.
+// A member mounted at the root ('') must not ship a folder that another mount uses.
 const claimed = new Set(mounts.filter((m) => m.at !== '').map((m) => m.at.replace(/\/$/, '')));
 for (const m of mounts) {
   if (!existsSync(m.from)) throw new Error(`${m.name}: ${m.from} is missing. Build it first (npm run build).`);

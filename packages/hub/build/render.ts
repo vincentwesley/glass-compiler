@@ -85,7 +85,10 @@ export function pipeline(members: readonly Member[] = MEMBERS): string {
 export function gradeTable(results: Results | null): string {
   if (!results || results.suites.length === 0) return '<p class="muted">No recorded results yet.</p>';
   const rows = results.suites
-    .map((s) => `<tr><th scope="row">${esc(s.name)}</th><td>${s.passed}</td><td>${s.failed}</td><td>${s.skipped}</td><td>${s.total}</td></tr>`)
+    .map(
+      (s) =>
+        `<tr><th scope="row">${esc(s.name)}</th><td data-label="Pass">${s.passed}</td><td data-label="Fail">${s.failed}</td><td data-label="Skipped">${s.skipped}</td><td data-label="Total">${s.total}</td></tr>`,
+    )
     .join('');
   return `<div class="table-wrap" role="region" aria-label="Test results" tabindex="0"><table class="grade-table"><thead><tr><th scope="col">Suite</th><th scope="col">Pass</th><th scope="col">Fail</th><th scope="col">Skipped</th><th scope="col">Total</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }

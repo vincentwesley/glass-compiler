@@ -6,6 +6,7 @@ on:
     paths:
       - 'packages/**'
       - 'site.config.mjs'
+      - 'docs/screenshots/**'
       - 'scripts/**'
       - 'package.json'
       - 'package-lock.json'

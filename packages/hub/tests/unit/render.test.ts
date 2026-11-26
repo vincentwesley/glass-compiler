@@ -42,15 +42,20 @@ describe('hub rendering', () => {
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 
-  it('links only live stops in the pipeline', () => {
+  it('links a pipeline stop exactly when its member is live', () => {
     const html = pipeline();
-    expect(html.match(/<a /g)?.length).toBe(MEMBERS.filter((m) => m.status === 'live' && ['compiler', 'wasm', 'kernel', 'small-c'].includes(m.slug)).length);
+    for (const slug of ['compiler', 'wasm', 'kernel', 'small-c']) {
+      const m = MEMBERS.find((x) => x.slug === slug)!;
+      expect(html.includes(`href="/glass-compiler/series/${slug}/"`), slug).toBe(m.status === 'live');
+    }
+    const planned = MEMBERS.map((m) => (m.slug === 'wasm' ? { ...m, status: 'live' as const } : m));
+    expect(pipeline(planned).match(/series\/wasm\//g)).toHaveLength(2);
   });
 
   it('puts failures first in a grade line and mentions skips', () => {
     expect(gradeLine({ name: 'x', passed: 9, failed: 1, skipped: 2, total: 12 })).toBe('1 failing, 9 of 12 pass (2 skipped)');
     expect(gradeTable(null)).toContain('No recorded results yet');
-    expect(gradeTable(results)).toContain('<td>167</td>');
+    expect(gradeTable(results)).toContain('<td data-label="Pass">167</td>');
   });
 
   it('escapes text', () => {

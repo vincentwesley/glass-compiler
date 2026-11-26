@@ -42,11 +42,16 @@ for (const file of files(root)) {
   if (!html.includes("Copyright 2026 Vin's Atelier.") || !html.includes('Designed and built by Vin.')) problems.push(`${rel}: missing the house sign-off`);
   if (!html.includes('class="creator"')) problems.push(`${rel}: missing the credits card`);
   if (!html.includes('@portus_workstation')) problems.push(`${rel}: missing the logo artist credit`);
+  // <link href> loads things (stylesheets, preloads, icons); only rel=canonical may point elsewhere.
+  for (const [tag] of html.matchAll(/<link\b[^>]*>/g)) {
+    const href = /\shref="(https?:\/\/[^"]+)"/.exec(tag)?.[1];
+    if (href && !/\srel="canonical"/.test(tag)) problems.push(`${rel}: <link> loads ${href} from another origin`);
+  }
   for (const [, attr, url] of html.matchAll(/\s(src|href)="([^"]+)"/g)) {
     if (/^(mailto:|#|data:)/.test(url)) continue;
     if (/^https?:\/\//.test(url)) {
       if (attr === 'src') problems.push(`${rel}: loads ${url} from another origin`);
-      continue; // outbound links are fine
+      continue; // outbound <a> links are fine; <link> loads are checked above
     }
     const target = url.startsWith('/') ? url : posix.join(dirname(rel), url);
     if (!target.startsWith(SITE.base)) problems.push(`${rel}: ${url} points outside ${SITE.base}`);
