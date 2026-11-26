@@ -3,7 +3,7 @@
 .workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: 'source' 'tokens' 'tree' 'bytecode' 'vm';
+  grid-template-areas: 'source' 'tokens' 'tree' 'bytecode' 'vm' 'wasm';
   gap: 26px;
   max-width: 1640px;
   margin: 0 auto;
@@ -15,6 +15,7 @@
 .panel-tree { grid-area: tree; }
 .panel-bytecode { grid-area: bytecode; }
 .panel-vm { grid-area: vm; }
+.panel-wasm { grid-area: wasm; }
 
 @media (min-width: 760px) {
   .workspace {
@@ -22,17 +23,19 @@
     grid-template-areas:
       'source tokens'
       'tree tree'
-      'bytecode vm';
+      'bytecode vm'
+      'wasm wasm';
   }
 }
 
 @media (min-width: 1180px) {
   .workspace {
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.9fr) minmax(0, 1.2fr);
-    grid-template-rows: 470px 560px;
+    grid-template-rows: 470px 560px 480px;
     grid-template-areas:
       'source tree tree'
-      'tokens bytecode vm';
+      'tokens bytecode vm'
+      'wasm wasm wasm';
   }
 }
 
@@ -473,4 +476,108 @@ li + li .diag {
   flex-direction: column;
   gap: 8px;
   min-height: 0;
+}
+
+/* ---------- WebAssembly ---------- */
+
+@media (max-width: 1179px) {
+  .panel-wasm .panel-body { max-height: 460px; }
+}
+
+.wasm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.wasm-actions .btn {
+  text-decoration: none;
+}
+
+.wasm-check {
+  margin: 0;
+  color: var(--ink-dim);
+}
+
+.wasm-check.is-same::before {
+  content: '✓ ';
+  color: var(--accent-ink);
+}
+
+.wasm-check.is-different {
+  color: var(--bad);
+}
+
+.wasm-funcs {
+  columns: 2 26rem;
+  column-gap: 24px;
+}
+
+.wasm-funcs .chunk {
+  break-inside: avoid-column;
+}
+
+.wasm-sig {
+  color: var(--ink-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.winstr {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 8px;
+  width: 100%;
+  padding: 1px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 13px/1.5 var(--font-mono);
+  text-align: left;
+  cursor: pointer;
+}
+
+.winstr:hover {
+  background: var(--surface-3);
+}
+
+.winstr .addr {
+  flex: none;
+  color: var(--ink-faint);
+}
+
+.winstr.d1 .wop { padding-left: 2ch; }
+.winstr.d2 .wop { padding-left: 4ch; }
+.winstr.d3 .wop { padding-left: 6ch; }
+.winstr.d4 .wop { padding-left: 8ch; }
+.winstr.d5 .wop { padding-left: 10ch; }
+.winstr.d6 .wop { padding-left: 12ch; }
+
+.wop {
+  white-space: pre;
+}
+
+/* The decoded meaning of a constant: never cut off; wraps below the instruction on narrow screens. */
+.wnote {
+  color: var(--ink-faint);
+  white-space: pre;
+}
+
+.wasm-runtime {
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.wasm-runtime summary {
+  cursor: pointer;
+  color: var(--accent-ink);
+  min-height: 32px;
+}
+
+.wasm-rt-names {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-dim);
+  word-spacing: 0.4em;
 }

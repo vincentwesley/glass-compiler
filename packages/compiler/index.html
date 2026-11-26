@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; manifest-src 'self'; worker-src 'none'"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; manifest-src 'self'; worker-src 'none'"
     />
     <meta name="referrer" content="no-referrer" />
     <meta name="color-scheme" content="dark light" />
@@ -57,6 +57,7 @@
         <li><a href="#panel-tree"><span class="pixel-label">02</span> Tree</a></li>
         <li><a href="#panel-bytecode"><span class="pixel-label">03</span> Bytecode</a></li>
         <li><a href="#panel-vm"><span class="pixel-label">04</span> VM</a></li>
+        <li><a href="#panel-wasm"><span class="pixel-label">05</span> Wasm</a></li>
       </ol>
     </nav>
 
@@ -122,6 +123,18 @@
           <span class="panel-meta"><span id="vm-count">0</span> steps · stack VM</span>
         </header>
         <div id="vm-body" class="panel-body"></div>
+      </section>
+      <section id="panel-wasm" class="card panel panel-wasm" aria-labelledby="h-wasm" tabindex="-1">
+        <header class="panel-head">
+          <h2 id="h-wasm"><span class="pixel-label">05</span> WebAssembly</h2>
+          <span id="wasm-meta" class="panel-meta">no module</span>
+          <div id="wasm-actions" class="panel-tools wasm-actions"></div>
+        </header>
+        <p class="panel-sub">
+          The same program compiled to a real WebAssembly module: what the VM does, written for a machine. Select an
+          instruction to see the Pane code it came from.
+        </p>
+        <div id="wasm-body" class="panel-body scroll"></div>
       </section>
     </main>
 

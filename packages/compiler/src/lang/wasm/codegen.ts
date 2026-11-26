@@ -21,6 +21,8 @@ export interface WasmOutput {
   functions: WasmFunction[];
   /** Memory the host must provide, in 64 KiB pages. */
   memoryPages: { min: number; max: number };
+  /** The module's static strings by address. */
+  strings: Map<number, string>;
 }
 
 const OPS: Record<string, string> = {
@@ -38,6 +40,25 @@ const OPS: Record<string, string> = {
 };
 
 const MAX_PAGES = 256; // 16 MiB is plenty for a Pane program's strings.
+
+/** For each UTF-16 index of `text` (and its end), the UTF-8 byte offset. */
+export function utf8Offsets(text: string): number[] {
+  const out = new Array<number>(text.length + 1);
+  let bytes = 0;
+  for (let i = 0; i < text.length; i++) {
+    out[i] = bytes;
+    const c = text.charCodeAt(i);
+    if (c < 0x80) bytes += 1;
+    else if (c < 0x800) bytes += 2;
+    else if (c >= 0xd800 && c < 0xdc00) {
+      // A surrogate pair is one 4-byte character; its second half shares the offset.
+      bytes += 4;
+      out[++i] = bytes - 4;
+    } else bytes += 3;
+  }
+  out[text.length] = bytes;
+  return out;
+}
 
 const sigFor = (arity: number) => `${Array(arity).fill('i64').join(',')}>i64`;
 
@@ -284,14 +305,25 @@ export function compileToWasm(program: Program, source: string): WasmOutput {
     customs: [
       { name: 'glass.source', bytes: customBytes((b) => (b.str('pane'), b.str(source))) },
       {
+        // Names for the globals (the 1.0 name section has none): Pane's own names for its variables.
+        name: 'glass.globals',
+        bytes: customBytes((b) => {
+          const all = ['heap', 'depth', ...[...globals.keys()]];
+          b.u32(all.length);
+          all.forEach((n, i) => (b.u32(i), b.str(i < 2 ? `rt.${n}` : n)));
+        }),
+      },
+      {
         name: 'glass.map',
         bytes: customBytes((b) => {
           b.u32(paneCount);
+          // Source positions as UTF-8 byte offsets (Pane spans count UTF-16 code units).
+          const byteAt = utf8Offsets(source);
           funcs.slice(0, paneCount).forEach((f, i) => {
             b.u32(HOST_IMPORTS.length + i);
             // One entry per instruction, the closing `end` included; offsets are stored plus one.
             b.u32(f.body.length + 1);
-            for (const ins of f.body) b.u32(ins.offset === undefined ? 0 : ins.offset + 1);
+            for (const ins of f.body) b.u32(ins.offset === undefined ? 0 : byteAt[ins.offset]! + 1);
             b.u32(0);
           });
         }),
@@ -306,5 +338,5 @@ export function compileToWasm(program: Program, source: string): WasmOutput {
     body: f.body,
     params: f.params.map((p) => p.name),
   }));
-  return { bytes, functions, memoryPages: { min: pages, max: MAX_PAGES } };
+  return { bytes, functions, memoryPages: { min: pages, max: MAX_PAGES }, strings: strings.entries() };
 }

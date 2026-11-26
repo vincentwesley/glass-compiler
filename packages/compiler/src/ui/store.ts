@@ -2,7 +2,7 @@ import { Store as BaseStore } from '@glass/ui/store';
 import type { Build } from '../lang';
 import type { Links } from './links';
 
-export type Origin = 'editor' | 'tokens' | 'tree' | 'bytecode' | 'vm' | 'lineage' | 'tour';
+export type Origin = 'editor' | 'tokens' | 'tree' | 'bytecode' | 'wasm' | 'vm' | 'lineage' | 'tour';
 
 export interface State {
   build: Build;

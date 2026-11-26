@@ -18,7 +18,7 @@ a shallow git submodule at `packages/wasm/spec`.
 
 **19,270 of 19,270 commands pass, in all 73 files.** The page shows the
 recorded count per file and can run the same files again in your browser
-(about half a second).
+(about 4 seconds on the live site, fetching the 73 files included).
 
 How it's graded:
 
@@ -30,6 +30,14 @@ How it's graded:
   to be rejected at the right stage: decoding or parsing, validation, or
   linking. They don't need the exact wording, as is usual for independent
   implementations.
+
+## Pane programs, compiled
+
+Glass Compiler compiles Pane to WebAssembly, and its **Open in Glass Wasm** link
+opens the module here. The Module panel shows the Pane source, values on the
+stack and in locals read as Pane values, and selecting an instruction shows the
+Pane line it came from. The module imports a five-function `pane` host
+(`crate/src/pane_host.rs`), which Glass Wasm provides.
 
 ## What's inside (`crate/`)
 

@@ -12,7 +12,7 @@ import '@glass/ui/credits';
 
 import wasmUrl from '../generated/glass_wasm.wasm?url';
 import { byId, h } from '@glass/ui/dom';
-import { fragmentUrl, sourceFromFragment } from '@glass/ui/share';
+import { decodeBytes, encodeBytes, encodeSource, fragmentUrl, sourceFromFragment } from '@glass/ui/share';
 import type { StepperChange } from '@glass/ui/stepper';
 import { mountThemeToggle } from '@glass/ui/theme';
 import { mountTour } from '@glass/ui/tour';
@@ -28,6 +28,7 @@ import { GlassWasm, stepsFor, type ModuleInfo } from './vm';
 const DRAFT_KEY = 'glass-wasm-draft';
 const TOUR_KEY = 'glass-wasm-tour-done';
 const OWN = 'own';
+const COMPILED = 'compiled';
 
 function loadDraft(): string | null {
   try {
@@ -75,6 +76,11 @@ async function start() {
     }
     return shared;
   };
+  /**
+   * A compiled module (#wasm=…), e.g. from Glass Compiler's "Open in Glass Wasm".
+   * The fragment stays in the address bar, so reloading keeps the module.
+   */
+  const takeCompiled = () => (window.location.hash.startsWith('#wasm=') ? decodeBytes(window.location.hash.slice(6)) : null);
   const shared = takeShared();
   const draft = loadDraft();
   const initial = shared ?? draft ?? EXAMPLES[0]!.source;
@@ -99,7 +105,7 @@ async function start() {
   const recoverFromCrash = () => {
     if (vm.crashes === seenCrashes) return;
     seenCrashes = vm.crashes;
-    vm.load(store.state.source);
+    vm.load(compiled ?? store.state.source);
   };
 
   /** Moves the machine to a step (re-running the call deterministically from the start). */
@@ -163,7 +169,54 @@ async function start() {
     byId<HTMLButtonElement>('run').disabled = funcs.length === 0;
   };
 
+  // A binary module being debugged (compiled from Pane), or null when the textarea's text is.
+  let compiled: Uint8Array | null = null;
+  const paneView = byId('pane-view');
+  const paneSource = byId('pane-source');
+  const paneEdit = byId<HTMLAnchorElement>('pane-edit');
+  const textMode = [sourceEl, byId('source-label')];
+
+  const setCompiledMode = (on: boolean) => {
+    paneView.hidden = !on;
+    for (const el of textMode) el.hidden = on;
+  };
+
+  const loadCompiled = (bytes: Uint8Array) => {
+    const r = vm.load(bytes);
+    if (!r.ok) {
+      compiled = null;
+      setCompiledMode(false);
+      errorEl.hidden = false;
+      errorEl.textContent = `The linked module could not be loaded: ${r.error}`;
+      return;
+    }
+    compiled = bytes;
+    const src = r.value.source;
+    setCompiledMode(true);
+    paneSource.textContent = src?.text ?? '(no source in this module)';
+    paneEdit.hidden = src?.language !== 'pane';
+    if (src?.language === 'pane') paneEdit.href = `../#code=${encodeSource(src.text)}`;
+    select.value = COMPILED;
+    blurb.textContent =
+      src?.language === 'pane'
+        ? 'Compiled from Pane by Glass Compiler. The code panel shows the WebAssembly; select an instruction to see the Pane it came from.'
+        : 'A binary module.';
+    errorEl.hidden = true;
+    statusEl.textContent = 'Valid · instantiated';
+    statusEl.classList.remove('is-bad');
+    store.set({ source: src?.text ?? '', info: r.value, loadError: null, selected: null });
+    renderRunBar(r.value, { export: 'main', args: [] });
+    runCall();
+  };
+
+  const leaveCompiled = () => {
+    compiled = null;
+    setCompiledMode(false);
+    if (window.location.hash.startsWith('#wasm=')) window.history.replaceState(null, '', window.location.href.split('#')[0]);
+  };
+
   const loadModule = (source: string, preferred?: { export: string; args: string[] }) => {
+    leaveCompiled();
     const r = vm.load(source);
     if (!r.ok) {
       store.set({ source, info: null, loadError: r.error, machine: null, call: null, trace: new Uint32Array(), selected: null });
@@ -184,13 +237,24 @@ async function start() {
 
   // Examples menu, with "Your module" for anything edited or shared.
   const exampleFor = (src: string) => EXAMPLES.find((e) => e.source === src);
-  select.replaceChildren(...EXAMPLES.map((e) => h('option', { value: e.id }, e.title)), h('option', { value: OWN }, 'Your module'));
+  select.replaceChildren(
+    ...EXAMPLES.map((e) => h('option', { value: e.id }, e.title)),
+    h('option', { value: OWN }, 'Your module'),
+    h('option', { value: COMPILED, disabled: true }, 'From Glass Compiler'),
+  );
   const describe = (src: string) => {
     const ex = exampleFor(src);
     select.value = ex ? ex.id : OWN;
     blurb.textContent = ex ? ex.blurb : 'Your own module. Edit freely: it is saved in this browser only.';
   };
   select.addEventListener('change', () => {
+    if (select.value === OWN) {
+      const own = loadDraft() ?? EXAMPLES[0]!.source;
+      sourceEl.value = own;
+      describe(own);
+      loadModule(own);
+      return;
+    }
     const ex = EXAMPLES.find((e) => e.id === select.value);
     if (!ex) return;
     sourceEl.value = ex.source;
@@ -214,8 +278,16 @@ async function start() {
     runCall();
   });
 
+  byId('pane-leave').addEventListener('click', () => {
+    const own = loadDraft() ?? EXAMPLES[0]!.source;
+    sourceEl.value = own;
+    describe(own);
+    loadModule(own);
+    sourceEl.focus();
+  });
+
   byId('share').addEventListener('click', async () => {
-    const url = fragmentUrl(window.location.href, 'wat', sourceEl.value);
+    const url = compiled ? `${window.location.href.split('#')[0]}#wasm=${encodeBytes(compiled)}` : fragmentUrl(window.location.href, 'wat', sourceEl.value);
     const field = byId<HTMLInputElement>('share-url');
     const status = byId('share-status');
     try {
@@ -230,14 +302,24 @@ async function start() {
     }
   });
 
-  mountCode(byId('code-body'), byId('code-count'), byId('code-help'), store, (k) => selectInstr(k, 'code'));
-  mountMachine(byId('machine-body'), byId('machine-count'), store, goto, (k) => selectInstr(k, 'machine'));
+  // Values and constants read as Pane when the module came from Pane.
+  const paneValues = () => {
+    const info = store.state.info;
+    return info?.source?.language === 'pane' ? { table: info.table, read: (o: number, l: number) => vm.memory(o, l) } : null;
+  };
+  mountCode(byId('code-body'), byId('code-count'), byId('code-help'), store, (k) => selectInstr(k, 'code'), paneValues);
+  mountMachine(byId('machine-body'), byId('machine-count'), store, goto, (k) => selectInstr(k, 'machine'), paneValues);
   mountMemory(byId('memory-body'), byId('memory-meta'), store, vm);
   mountLineage(byId('lineage'), store, (k) => selectInstr(k, 'lineage'), (step) => goto({ step, playing: false }));
   mountSpec(vm);
 
   // A share link pasted into this tab while it is open.
   window.addEventListener('hashchange', () => {
+    const bytes = takeCompiled();
+    if (bytes) {
+      loadCompiled(bytes);
+      return;
+    }
     const next = takeShared();
     if (next === null) return;
     sourceEl.value = next;
@@ -247,8 +329,9 @@ async function start() {
 
   sourceEl.value = initial;
   describe(initial);
-  const ex = exampleFor(initial);
-  loadModule(initial, ex?.run);
+  const linked = takeCompiled();
+  if (linked) loadCompiled(linked);
+  else loadModule(initial, exampleFor(initial)?.run);
 
   const firstInstr = () => {
     const f = store.state.info?.funcs[0];

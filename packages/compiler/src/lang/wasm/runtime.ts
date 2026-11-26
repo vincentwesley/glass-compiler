@@ -57,6 +57,11 @@ export class StringTable {
     return addr;
   }
 
+  /** Every static string by address (for showing constants). */
+  entries(): Map<number, string> {
+    return new Map([...this.at].map(([text, addr]) => [addr, text] as const));
+  }
+
   /** Reserves `words` 32-bit slots (for the function-name table). */
   reserve(words: number): number {
     const addr = this.base + this.size;

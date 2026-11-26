@@ -80,6 +80,7 @@
           <li><strong>Click anything.</strong> A token, a tree node, an instruction or a line of output: everything it is linked to lights up.</li>
           <li><strong>Step the machine.</strong> Forwards, backwards, play or scrub, with the stack, frames, locals and globals at every step.</li>
           <li><strong>See why precedence works.</strong> The binding powers the Pratt parser uses are on show in the tree panel.</li>
+          <li><strong>See it as WebAssembly.</strong> A fifth stage shows the same program as a real WebAssembly module, checked against your browser's own engine.</li>
           <li><strong>Share a program.</strong> The link carries your code after the <code>#</code>, so it never passes through a server.</li>
         </ul>
       </section>
@@ -95,10 +96,11 @@
       </section>
 
       <section class="hub-section" aria-labelledby="h-next">
-        <h2 id="h-next"><span class="pixel-label">03</span> Where it goes next</h2>
+        <h2 id="h-next"><span class="pixel-label">03</span> The first link in the pipeline</h2>
         <p>
-          A WebAssembly backend, so a Pane program can leave the compiler as a real <code>.wasm</code> module and run, step
-          by step, in Glass Wasm. It's the first link in the series pipeline.
+          Every program also compiles to a real <code>.wasm</code> module. Glass Compiler runs it on your browser's own
+          WebAssembly engine to check it prints exactly what the VM prints. <strong>Open in Glass Wasm</strong> steps
+          through it there, with every instruction linked back to your Pane code.
         </p>
       </section>
     </main>

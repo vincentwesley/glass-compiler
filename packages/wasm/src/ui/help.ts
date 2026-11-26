@@ -32,7 +32,30 @@ const FAMILY: [RegExp, string][] = [
   [/\.(wrap|extend|trunc_|convert|demote|promote|reinterpret)/, 'Converts the top of the stack to another type.'],
 ];
 
+// The runtime library compiled into every Pane module (Glass Compiler's wasm/runtime.ts).
+const RUNTIME: Record<string, string> = {
+  'rt.add': "Pane's +: adds two numbers, or joins them as text when either is a string.",
+  'rt.subtract': "Pane's -: both must be numbers.",
+  'rt.multiply': "Pane's *: both must be numbers.",
+  'rt.divide': "Pane's /: both must be numbers, and dividing by zero is an error.",
+  'rt.remainder': "Pane's %: both must be numbers; the host computes the exact remainder.",
+  'rt.negate': "Pane's unary -: the value must be a number.",
+  'rt.not': "Pane's not: true for false and nil, false for everything else.",
+  'rt.eq': "Pane's ==: numbers by value, strings by their text, everything else by identity.",
+  'rt.ne': "Pane's !=.",
+  'rt.lt': "Pane's <: two numbers or two strings.",
+  'rt.le': "Pane's <=: two numbers or two strings.",
+  'rt.gt': "Pane's >: two numbers or two strings.",
+  'rt.ge': "Pane's >=: two numbers or two strings.",
+  'rt.truthy': 'Turns a Pane value into a WebAssembly condition: only false and nil count as false.',
+  'rt.check_defined': 'Reads a global, or stops with an error if the program never declared it.',
+  'rt.call_target': 'Checks a call can happen (a function, the right number of arguments, not too deep) and returns its table slot.',
+  'rt.print': 'Turns a Pane value into text and hands it to the host to print.',
+};
+
 export function instrHelp(text: string): string {
+  const rt = /^call \$(rt\.[a-z_]+)$/.exec(text)?.[1];
+  if (rt) return RUNTIME[rt] ?? 'Calls a function of the runtime library compiled into this module.';
   for (const [re, help] of FAMILY) if (re.test(text)) return help;
   return 'A numeric instruction: pops its operands and pushes the result.';
 }

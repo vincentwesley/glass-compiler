@@ -41,6 +41,11 @@ export const tourSteps = (store: Store): TourStep[] => [
     text: 'The VM runs the instructions one by one. Step forwards and backwards, or press Play, and watch values move on and off the stack.',
   },
   {
+    target: 'panel-wasm',
+    title: '5 · WebAssembly',
+    text: 'The same program, compiled again: this time to a real WebAssembly module, checked against your browser\'s own engine. Open it in Glass Wasm to step through it there.',
+  },
+  {
     target: 'panel-tree',
     title: 'Everything is linked',
     text: 'We just selected an operator for you. Mint shows the selection in every stage: its tokens, its tree node, its instructions and the VM steps that ran them. Peach shows what the VM will run next.',

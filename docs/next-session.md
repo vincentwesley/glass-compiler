@@ -31,28 +31,25 @@
 
 ## Current state
 
-- **M1 (series monorepo) and M2 (Glass Wasm) are done.**
-  - Glass Compiler is at `/glass-compiler/`.
+- **M1, M2 and M3 are done.**
+  - Glass Compiler (`/glass-compiler/`) compiles Pane to bytecode and to a real
+    WebAssembly module.
+  - Glass Wasm (`/glass-compiler/wasm/`) passes the WebAssembly 1.0 testsuite
+    (19,270 / 19,270) and debugs compiled Pane via "Open in Glass Wasm".
   - The hub is at `/glass-compiler/series/`.
-  - Glass Wasm is at `/glass-compiler/wasm/`. It passes 19,270 / 19,270
-    commands of the WebAssembly 1.0 testsuite.
-- Next is **M3, the Pane → Wasm backend** (PLAN.md):
-  1. Add a Wasm code generator in `packages/compiler/src/lang/`: Pane AST →
-     `glass-wasm`-compatible binary module. Write the encoder in TypeScript;
-     the Rust side already decodes.
-     - Globals become Wasm globals.
-     - Functions become Wasm functions.
-     - Strings and `print` go through host imports.
-     - Every instruction carries its Pane node id, in a custom name section or a
-       side table.
-  2. Add a fifth stage panel, "Wasm", to Glass Compiler, linked like the others.
-  3. Add "Open in Glass Wasm", which passes the module in the fragment
-     (`#wasm=`). Glass Wasm's `gw_load` already takes binary.
-  4. Known-answer tests: every compiler example gives the same output from the
-     bytecode VM, from Glass Wasm (its Rust VM in Node) and from Node's own
-     WebAssembly.
-- Glass Wasm only implements the `spectest` host imports. Pane's `print` of
-  strings needs a host import designed in M3 (record it in DECISIONS).
+- Next is **M4, Small C** (PLAN.md):
+  1. Create `packages/small-c/` with a C-subset compiler in TypeScript, scoped
+     like chibicc: lexer, preprocessor subset, parser, types, codegen to
+     WebAssembly. Reuse `packages/compiler/src/lang/wasm/encode.ts`; it can
+     move to glass-ui or a shared package once a second user exists.
+  2. Add c-testsuite as a pinned submodule (licences: THIRD_PARTY_NOTICES).
+     Run each test, record passes, and list every skipped test with its
+     reason, all via `scripts/record-results.mjs small-c`.
+  3. Add a page at `/glass-compiler/small-c/` (tokens, tree, generated Wasm)
+     and an "Open in Glass Wasm" link (Glass Wasm reads `glass.source` and
+     `glass.map`, so set language "c").
+  4. Small C programs need libc-style host imports (putchar/printf). Design a
+     `c` host next to `pane_host.rs` and record the decision.
 
 ## Known gaps
 

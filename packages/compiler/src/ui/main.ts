@@ -25,6 +25,7 @@ import { mountTour } from '@glass/ui/tour';
 import { TOUR_DONE_KEY, tourSteps } from './tour-steps';
 import { mountTree } from './tree-panel';
 import { mountVm } from './vm-panel';
+import { mountWasm } from './wasm-panel';
 
 const DRAFT_KEY = 'glass-draft';
 const DEBOUNCE_MS = 160;
@@ -214,6 +215,7 @@ function start() {
   mountTokens(byId('tokens-body'), byId('tokens-count'), store);
   mountTree(byId('tree-body'), byId('tree-count'), byId('tree-tools'), store);
   mountBytecode(byId('bytecode-body'), byId('bytecode-count'), byId('bytecode-help'), store);
+  mountWasm(byId('wasm-body'), byId('wasm-meta'), byId('wasm-actions'), store);
   mountVm(byId('vm-body'), byId('vm-count'), store);
   mountLineage(byId('lineage'), store);
   mountThemeToggle(byId<HTMLButtonElement>('theme-toggle'));

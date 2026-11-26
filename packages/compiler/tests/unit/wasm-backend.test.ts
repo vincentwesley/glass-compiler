@@ -127,3 +127,17 @@ describe('the WebAssembly module', () => {
     await same(src);
   });
 });
+
+describe('source offsets', () => {
+  it('converts UTF-16 positions to UTF-8 byte offsets', async () => {
+    const { utf8Offsets } = await import('../../src/lang/wasm/codegen');
+    const text = 'aé😀b';
+    const at = utf8Offsets(text);
+    const enc = (s: string) => new TextEncoder().encode(s).length;
+    expect(at[0]).toBe(0);
+    expect(at[1]).toBe(enc('a'));
+    expect(at[2]).toBe(enc('aé'));
+    expect(at[4]).toBe(enc('aé😀'));
+    expect(at[text.length]).toBe(enc(text));
+  });
+});

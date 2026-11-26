@@ -51,8 +51,11 @@ More in [packages/wasm/README.md](packages/wasm/README.md).
 | 5 | Glass Kernel | A tiny teaching OS on a simulated RISC-V machine | Known-answer system-call tests | Planned (M6) |
 | 6 | Glass Language Tools | A language server for Pane in VS Code and a web playground | LSP request and response tests | Planned (M7) |
 
-They connect. A Pane program compiles to WebAssembly, runs in the Glass Wasm
-debugger and later boots on Glass Kernel. The order, and why, is in
+They connect. A Pane program compiles to WebAssembly in Glass Compiler. One
+click opens it in the Glass Wasm debugger, with every instruction linked back
+to the Pane code it came from. Later it boots on Glass Kernel. The bytecode VM,
+your browser's WebAssembly and Glass Wasm all give the same output, and that is
+tested. The order, and why, is in
 [docs/PLAN.md](docs/PLAN.md).
 
 ## How this repository is laid out

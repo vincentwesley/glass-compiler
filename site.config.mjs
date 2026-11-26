@@ -29,7 +29,7 @@ export const MEMBERS = [
     path: '',
     pkg: 'packages/compiler',
     milestone: 'M1',
-    summary: 'Pane, a tiny language, compiled in front of you: tokens, a syntax tree, bytecode and a stack VM, every stage linked.',
+    summary: 'Pane, a tiny language, compiled in front of you: tokens, a syntax tree, bytecode, a stack VM and a real WebAssembly module, every stage linked.',
     gradedBy: 'Unit tests on the lexer, parser, compiler and VM, plus browser checks with axe.',
   },
   {
