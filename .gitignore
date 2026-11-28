@@ -16,3 +16,9 @@ qa-output/
 _site/
 target/
 target/
+.env*
+!.env.example
+.dev.vars
+*.db
+data/
+graphify-out/
